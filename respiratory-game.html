@@ -37,6 +37,8 @@ main{max-width:760px;margin:0 auto;padding:24px 18px 48px;display:flex;flex-dire
 h1{font-family:var(--display);font-size:30px;line-height:1.1;margin:0;letter-spacing:-.01em}
 .meter{display:flex;align-items:center;gap:10px;min-width:220px;flex:1;max-width:400px}
 button.restart{font-size:14px;padding:6px 12px;border-radius:999px;background:var(--panel)}
+.btns{display:flex;flex-wrap:wrap;gap:10px}
+button.go.alt{background:var(--panel);color:var(--ink);border-color:var(--ink)}
 .meter .track{flex:1;height:14px;border-radius:7px;background:var(--line);overflow:hidden}
 .meter .fill{height:100%;width:0;background:var(--atp);transition:width .5s ease}
 .meter b{font-family:var(--display);font-size:20px;color:var(--atp-ink);font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -325,7 +327,7 @@ input{font:500 18px var(--body);color:var(--ink);background:var(--bg);border:1.5
 };
   var STAGES=CFG.stages,Q=CFG.questions,MAX=Q.length,PAGE_ID=CFG.pageId; /* one question, one point */
   var card=document.getElementById('card'),route=document.getElementById('route');
-  var st={i:-1,score:0,guess:null};
+  var st={i:-1,score:0,guess:null,got:[]}; /* got[k] is 1 once question k has earned its point */
   var UNIT=CFG.unit||'points',UNIT1=CFG.unitOne||'point';
   /* Illustrations: small drawings shown beside each question. */
   var ART={"airway": "<path d=\"M100,4 L100,46\" stroke=\"var(--mito-ink)\" stroke-width=\"13\" stroke-linecap=\"round\"/><path d=\"M100,46 L60,74 M100,46 L140,74\" stroke=\"var(--mito-ink)\" stroke-width=\"9\" stroke-linecap=\"round\"/><path d=\"M60,74 L36,98 M60,74 L74,102 M140,74 L164,98 M140,74 L126,102\" stroke=\"var(--mito-ink)\" stroke-width=\"5\" stroke-linecap=\"round\"/><circle cx=\"30\" cy=\"106\" r=\"9\" class=\"organ\"/><circle cx=\"42\" cy=\"112\" r=\"9\" class=\"organ\"/><circle cx=\"72\" cy=\"112\" r=\"9\" class=\"organ\"/><circle cx=\"84\" cy=\"106\" r=\"9\" class=\"organ\"/><circle cx=\"170\" cy=\"106\" r=\"9\" class=\"organ\"/><circle cx=\"158\" cy=\"112\" r=\"9\" class=\"organ\"/><circle cx=\"128\" cy=\"112\" r=\"9\" class=\"organ\"/><circle cx=\"116\" cy=\"106\" r=\"9\" class=\"organ\"/>", "alveoli": "<path d=\"M30,96 C60,128 100,128 100,112\" fill=\"none\" stroke=\"var(--poor)\" stroke-width=\"11\" stroke-linecap=\"round\"/><path d=\"M100,112 C100,128 150,126 174,92\" fill=\"none\" stroke=\"var(--rich)\" stroke-width=\"11\" stroke-linecap=\"round\"/><circle cx=\"74\" cy=\"44\" r=\"24\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"3\"/><circle cx=\"120\" cy=\"40\" r=\"24\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"3\"/><circle cx=\"98\" cy=\"76\" r=\"24\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"3\"/><circle cx=\"140\" cy=\"76\" r=\"19\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"3\"/><circle cx=\"56\" cy=\"78\" r=\"17\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"3\"/><circle cx=\"92\" cy=\"70\" r=\"4.5\" fill=\"var(--o2)\"/><circle cx=\"106\" cy=\"84\" r=\"4.5\" fill=\"var(--o2)\"/><circle cx=\"124\" cy=\"44\" r=\"4.5\" fill=\"var(--co2)\"/><circle cx=\"72\" cy=\"40\" r=\"4.5\" fill=\"var(--co2)\"/>", "blood": "<rect x=\"4\" y=\"28\" width=\"192\" height=\"74\" rx=\"37\" fill=\"var(--blood)\"/><g transform=\"rotate(-20 40 58)\"><ellipse cx=\"40\" cy=\"58\" rx=\"13\" ry=\"9\" fill=\"var(--rich)\"/><ellipse cx=\"40\" cy=\"58\" rx=\"6\" ry=\"3.5\" fill=\"#000\" opacity=\".16\"/></g><g transform=\"rotate(15 78 80)\"><ellipse cx=\"78\" cy=\"80\" rx=\"13\" ry=\"9\" fill=\"var(--rich)\"/><ellipse cx=\"78\" cy=\"80\" rx=\"6\" ry=\"3.5\" fill=\"#000\" opacity=\".16\"/></g><g transform=\"rotate(10 112 50)\"><ellipse cx=\"112\" cy=\"50\" rx=\"13\" ry=\"9\" fill=\"var(--rich)\"/><ellipse cx=\"112\" cy=\"50\" rx=\"6\" ry=\"3.5\" fill=\"#000\" opacity=\".16\"/></g><g transform=\"rotate(-25 160 66)\"><ellipse cx=\"160\" cy=\"66\" rx=\"13\" ry=\"9\" fill=\"var(--rich)\"/><ellipse cx=\"160\" cy=\"66\" rx=\"6\" ry=\"3.5\" fill=\"#000\" opacity=\".16\"/></g><g transform=\"rotate(30 70 46)\"><ellipse cx=\"70\" cy=\"46\" rx=\"13\" ry=\"9\" fill=\"var(--rich)\"/><ellipse cx=\"70\" cy=\"46\" rx=\"6\" ry=\"3.5\" fill=\"#000\" opacity=\".16\"/></g><circle cx=\"134\" cy=\"80\" r=\"11\" fill=\"var(--egg)\" stroke=\"var(--line)\" stroke-width=\"2\"/><circle cx=\"104\" cy=\"76\" r=\"3\" fill=\"var(--atp)\"/><circle cx=\"48\" cy=\"82\" r=\"3\" fill=\"var(--atp)\"/><circle cx=\"150\" cy=\"44\" r=\"3\" fill=\"var(--atp)\"/>", "cellart": "<rect x=\"10\" y=\"10\" width=\"180\" height=\"110\" rx=\"46\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"4\"/><circle cx=\"70\" cy=\"62\" r=\"26\" fill=\"var(--proton)\" opacity=\".55\"/><circle cx=\"70\" cy=\"62\" r=\"10\" fill=\"var(--proton)\"/><g transform=\"translate(108 50) scale(.42)\"><rect x=\"22\" y=\"26\" width=\"156\" height=\"80\" rx=\"40\" fill=\"var(--mito)\" stroke=\"var(--mito-ink)\" stroke-width=\"3\"/><path d=\"M42,70 q10,-34 20,0 t20,0 t20,0 t20,0 t20,0 t20,0\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/></g><g transform=\"translate(96 76) scale(.3) rotate(20 100 65)\"><rect x=\"22\" y=\"26\" width=\"156\" height=\"80\" rx=\"40\" fill=\"var(--mito)\" stroke=\"var(--mito-ink)\" stroke-width=\"3\"/><path d=\"M42,70 q10,-34 20,0 t20,0 t20,0 t20,0 t20,0 t20,0\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/></g><circle cx=\"40\" cy=\"96\" r=\"4\" fill=\"var(--cell-edge)\"/><circle cx=\"150\" cy=\"34\" r=\"4\" fill=\"var(--cell-edge)\"/><circle cx=\"124\" cy=\"34\" r=\"3\" fill=\"var(--cell-edge)\"/>", "cilia": "<rect x=\"6\" y=\"92\" width=\"188\" height=\"32\" rx=\"8\" class=\"organ\"/><path d=\"M18,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M33,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M48,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M63,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M78,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M93,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M108,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M123,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M138,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M153,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M168,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M183,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M10,54 C50,42 150,42 190,54\" fill=\"none\" stroke=\"var(--amino)\" stroke-width=\"9\" stroke-linecap=\"round\" opacity=\".55\"/><circle cx=\"54\" cy=\"46\" r=\"5\" fill=\"var(--gas)\"/><circle cx=\"98\" cy=\"44\" r=\"6\" fill=\"var(--gas)\"/><circle cx=\"140\" cy=\"47\" r=\"4\" fill=\"var(--gas)\"/><circle cx=\"74\" cy=\"22\" r=\"4\" fill=\"var(--gas)\"/><circle cx=\"126\" cy=\"20\" r=\"5\" fill=\"var(--gas)\"/><path d=\"M150.0,20.0 L179.7,20.0\" stroke=\"var(--muted)\" stroke-width=\"2.5\" stroke-linecap=\"round\" fill=\"none\"/><polygon points=\"186.0,20.0 178.1,24.3 178.1,15.7\" fill=\"var(--muted)\"/>", "lungs": "<rect x=\"93\" y=\"4\" width=\"14\" height=\"44\" rx=\"6\" fill=\"var(--panel)\" stroke=\"var(--mito-ink)\" stroke-width=\"2.5\"/><path class=\"organ\" d=\"M92,32 C68,30 40,62 38,100 C38,116 62,118 92,104 Z\"/><path class=\"organ\" d=\"M108,32 C132,30 160,62 162,100 C162,116 138,118 108,104 Z\"/><path d=\"M92,50 L72,72 M72,72 L60,92 M72,72 L80,94 M108,50 L128,72 M128,72 L140,92 M128,72 L120,94\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\" fill=\"none\"/><path d=\"M22,123 Q100,100 178,123\" stroke=\"var(--mito-ink)\" stroke-width=\"5\" stroke-linecap=\"round\" fill=\"none\"/>", "lungs-in": "<rect x=\"93\" y=\"4\" width=\"14\" height=\"44\" rx=\"6\" fill=\"var(--panel)\" stroke=\"var(--mito-ink)\" stroke-width=\"2.5\"/><path class=\"organ\" d=\"M92,32 C68,30 40,62 38,100 C38,116 62,118 92,104 Z\"/><path class=\"organ\" d=\"M108,32 C132,30 160,62 162,100 C162,116 138,118 108,104 Z\"/><path d=\"M92,50 L72,72 M72,72 L60,92 M72,72 L80,94 M108,50 L128,72 M128,72 L140,92 M128,72 L120,94\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\" fill=\"none\"/><path d=\"M22,123 Q100,100 178,123\" stroke=\"var(--mito-ink)\" stroke-width=\"5\" stroke-linecap=\"round\" fill=\"none\"/><path d=\"M70.0,4.0 L70.0,23.7\" stroke=\"var(--o2)\" stroke-width=\"3.5\" stroke-linecap=\"round\" fill=\"none\"/><polygon points=\"70.0,30.0 65.7,22.1 74.3,22.1\" fill=\"var(--o2)\"/><path d=\"M130.0,4.0 L130.0,23.7\" stroke=\"var(--o2)\" stroke-width=\"3.5\" stroke-linecap=\"round\" fill=\"none\"/><polygon points=\"130.0,30.0 125.7,22.1 134.3,22.1\" fill=\"var(--o2)\"/><path d=\"M14.0,100.0 L14.0,117.7\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\" fill=\"none\"/><polygon points=\"14.0,124.0 9.7,116.1 18.3,116.1\" fill=\"var(--mito-ink)\"/><path d=\"M186.0,100.0 L186.0,117.7\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\" fill=\"none\"/><polygon points=\"186.0,124.0 181.7,116.1 190.3,116.1\" fill=\"var(--mito-ink)\"/>", "lungs-out": "<rect x=\"93\" y=\"4\" width=\"14\" height=\"44\" rx=\"6\" fill=\"var(--panel)\" stroke=\"var(--mito-ink)\" stroke-width=\"2.5\"/><path class=\"organ\" d=\"M92,32 C68,30 40,62 38,100 C38,116 62,118 92,104 Z\"/><path class=\"organ\" d=\"M108,32 C132,30 160,62 162,100 C162,116 138,118 108,104 Z\"/><path d=\"M92,50 L72,72 M72,72 L60,92 M72,72 L80,94 M108,50 L128,72 M128,72 L140,92 M128,72 L120,94\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\" fill=\"none\"/><path d=\"M22,123 Q100,100 178,123\" stroke=\"var(--mito-ink)\" stroke-width=\"5\" stroke-linecap=\"round\" fill=\"none\"/><path d=\"M70.0,30.0 L70.0,10.3\" stroke=\"var(--co2)\" stroke-width=\"3.5\" stroke-linecap=\"round\" fill=\"none\"/><polygon points=\"70.0,4.0 74.3,11.9 65.7,11.9\" fill=\"var(--co2)\"/><path d=\"M130.0,30.0 L130.0,10.3\" stroke=\"var(--co2)\" stroke-width=\"3.5\" stroke-linecap=\"round\" fill=\"none\"/><polygon points=\"130.0,4.0 134.3,11.9 125.7,11.9\" fill=\"var(--co2)\"/><path d=\"M14.0,124.0 L14.0,106.3\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\" fill=\"none\"/><polygon points=\"14.0,100.0 18.3,107.9 9.7,107.9\" fill=\"var(--mito-ink)\"/><path d=\"M186.0,124.0 L186.0,106.3\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\" fill=\"none\"/><polygon points=\"186.0,100.0 190.3,107.9 181.7,107.9\" fill=\"var(--mito-ink)\"/>", "medal": "<path d=\"M70,4 L92,58 L108,58 L130,4 L112,4 L100,34 L88,4 Z\" fill=\"var(--rich)\"/><circle cx=\"100\" cy=\"84\" r=\"38\" fill=\"var(--medal)\" stroke=\"var(--ink)\" stroke-width=\"3\"/><circle cx=\"100\" cy=\"84\" r=\"28\" fill=\"none\" stroke=\"#000\" stroke-opacity=\".2\" stroke-width=\"2\"/><polygon points=\"100.0,66.0 104.7,77.5 117.1,78.4 107.6,86.5 110.6,98.6 100.0,92.0 89.4,98.6 92.4,86.5 82.9,78.4 95.3,77.5\" fill=\"var(--panel)\" opacity=\".9\"/>", "pulse": "<path d=\"M6,72 L52,72 L64,52 L78,98 L94,18 L110,108 L122,72 L134,72\" fill=\"none\" stroke=\"var(--rich)\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><g transform=\"translate(126 26) scale(.44)\"><path d=\"M100,118 C36,78 26,44 48,26 C68,11 90,22 100,42 C110,22 132,11 152,26 C174,44 164,78 100,118 Z\" fill=\"var(--rich)\"/></g>"};
@@ -363,16 +365,16 @@ input{font:500 18px var(--body);color:var(--ink);background:var(--bg);border:1.5
   /* The latest try is kept too, so reopening or refreshing the page carries on where it stopped. */
   var PKEY='study-progress:'+PAGE_ID;
   function saveProgress(i){
-    try{localStorage.setItem(PKEY,JSON.stringify({v:2,i:i,score:st.score,guess:st.guess,startBest:startBest,n:Q.length}));}catch(e){}
+    try{localStorage.setItem(PKEY,JSON.stringify({v:3,i:i,score:st.score,guess:st.guess,got:st.got,startBest:startBest,n:Q.length}));}catch(e){}
   }
   function loadProgress(){
     try{var p=JSON.parse(localStorage.getItem(PKEY)||'null');
-      if(p&&p.v===2&&p.n===Q.length&&p.i>=0&&p.i<=Q.length&&typeof p.score==='number'&&p.score>=0&&p.score<=MAX)return p;
+      if(p&&p.v===3&&p.n===Q.length&&p.i>=0&&p.i<=Q.length&&typeof p.score==='number'&&p.score>=0&&p.score<=MAX&&Array.isArray(p.got))return p;
     }catch(e){}
     return null;
   }
   function restart(){
-    st={i:-1,score:0,guess:null};
+    st={i:-1,score:0,guess:null,got:[]};
     try{localStorage.removeItem(PKEY);}catch(e){}
     intro();
   }
@@ -416,29 +418,38 @@ input{font:500 18px var(--body);color:var(--ink);background:var(--bg);border:1.5
     });
     show([
       head('Your mission',CFG.intro.heading,CFG.intro.art),
-      h('p',{text:CFG.intro.text+' Each question is worth 1 '+UNIT1+'. You earn it by getting the answer right on your first try.'}),
+      h('p',{text:CFG.intro.text+' Each question is worth 1 '+UNIT1+'. You earn it by getting the answer right on your first try. If you miss one, you can retake it.'}),
       h('p',{text:'Before you start, make a prediction. '+CFG.predict.q}),
       h('div',{'class':'opts'},guessBtns),
       fb,
       h('button',{'class':'go',type:'button',text:'Start the mission',on:{click:function(){
         if(st.guess===null){fb.textContent='Pick a guess first. There is no penalty for being wrong.';return;}
-        st.i=0;saveProgress(0);play();
+        st.i=0;st.score=0;st.got=[];saveProgress(0);play();
       }}})
     ]);
   }
 
-  /* ---------- one challenge ---------- */
-  function play(){
-    var c=Q[st.i],misses=0,fb=h('div',{'class':'fb','aria-live':'polite'}),body;
+  /* ---------- one challenge ----------
+     play() asks the next question. play(idx,onDone,true) is a retake of question idx:
+     a clean first-try answer on a retake earns the point that was missed. */
+  function play(idx,onDone,retake){
+    if(idx===undefined)idx=st.i;
+    var c=Q[idx],misses=0,fb=h('div',{'class':'fb','aria-live':'polite'}),body;
     function miss(el){misses++;if(el)shake(el);fb.className='fb no';fb.innerHTML='';fb.appendChild(h('strong',{text:'Not quite.'}));fb.appendChild(document.createTextNode(c.hint||''));}
     function win(){
-      var pts=misses?0:1;st.score+=pts;saveBest(st.score);saveProgress(st.i+1);
+      var pts=misses?0:1;
+      if(pts&&!st.got[idx]){st.got[idx]=1;st.score++;}
+      saveBest(st.score);saveProgress(onDone?st.i:idx+1);
       fb.className='fb ok';fb.innerHTML='';
-      fb.appendChild(h('strong',{},[stars(pts),document.createTextNode(pts?'Correct. +1 '+UNIT1:'Got it. No '+UNIT1+' this time, because it took more than one try.')]));
+      fb.appendChild(h('strong',{},[stars(pts),document.createTextNode(pts?'Correct. +1 '+UNIT1+(retake?' earned on the retake.':''):'Got it. No '+UNIT1+' yet, because it took more than one try. Retake the question to earn it.')]));
       fb.appendChild(document.createTextNode(c.why));
-      var last=st.i===Q.length-1;
-      var next=h('button',{'class':'go',type:'button',text:last?'See your results':'Next',on:{click:function(){st.i++;st.i<Q.length?play():end();}}});
-      card.appendChild(next);status();next.focus();
+      var last=idx===Q.length-1,btns=[];
+      if(!pts)btns.push(h('button',{'class':'go',type:'button',text:'Retake this question',on:{click:function(){play(idx,onDone,true);}}}));
+      btns.push(h('button',{'class':'go'+(pts?'':' alt'),type:'button',text:onDone?'Continue':(last?'See your results':'Next'),on:{click:function(){
+        if(onDone){onDone();return;}
+        st.i=idx+1;st.i<Q.length?play():end();
+      }}}));
+      card.appendChild(h('div',{'class':'btns'},btns));status();btns[0].focus();
     }
 
     if(c.type==='choice'){
@@ -507,7 +518,7 @@ input{font:500 18px var(--body);color:var(--ink);background:var(--bg);border:1.5
     }
 
     if(c.type==='number'){
-      var inp=h('input',{id:'answer-'+st.i,type:'number',inputmode:'numeric',min:'0',max:'9999'});
+      var inp=h('input',{id:'answer-'+idx,type:'number',inputmode:'numeric',min:'0',max:'9999'});
       var check=h('button',{'class':'go',type:'submit',text:'Check'});
       body=h('form',{'class':'field',on:{submit:function(e){
         e.preventDefault();
@@ -517,21 +528,22 @@ input{font:500 18px var(--body);color:var(--ink);background:var(--bg);border:1.5
         else{misses++;shake(inp);fb.className='fb no';fb.innerHTML='';
           fb.appendChild(h('strong',{text:'Not quite.'}));
           fb.appendChild(document.createTextNode((v<c.min?'Try a higher number. ':'Try a lower number. ')+(c.hint||'')));}
-      }}},[h('label',{'for':'answer-'+st.i,text:c.label}),inp,check]);
+      }}},[h('label',{'for':'answer-'+idx,text:c.label}),inp,check]);
     }
 
     show([
-      head('Step '+(c.s+1)+' of '+STAGES.length+' \u00b7 '+STAGES[c.s].name+' \u00b7 '+STAGES[c.s].where,c.q,c.art),
+      head((retake?'Retake \u00b7 ':'')+'Step '+(c.s+1)+' of '+STAGES.length+' \u00b7 '+STAGES[c.s].name+' \u00b7 '+STAGES[c.s].where,c.q,c.art),
       body,fb
     ]);
-    var first=card.querySelector('input,button');if(first&&st.i>0)first.focus();
+    var first=card.querySelector('input,button');if(first&&(idx>0||retake))first.focus();
   }
 
   /* ---------- results ---------- */
   function end(){
     var tier=st.score>=MAX-1?0:(st.score>=MAX*0.65?1:2),rank=CFG.ranks[tier];
     card.style.setProperty('--medal',['var(--atp)','var(--gas)','var(--food)'][tier]);
-    var guessed=st.guess===0;
+    var guessed=st.guess===0,missed=[];
+    for(var k=0;k<Q.length;k++)if(!st.got[k])missed.push(k);
     var saved=saveBest(st.score);
     var savedMsg=!saved?'Your points could not be saved in this browser window.'
       :(st.score>startBest?'New best score. '+st.score+' '+UNIT+' now count toward your total on the home page.'
@@ -546,15 +558,23 @@ input{font:500 18px var(--body);color:var(--ink);background:var(--bg);border:1.5
         document.createTextNode(CFG.predict.why)
       ]),
       h('p',{text:CFG.summary}),
-      h('button',{'class':'go',type:'button',text:'Play again',on:{click:restart}})
+      h('div',{'class':'btns'},missed.length?[
+        h('button',{'class':'go',type:'button',text:'Retake the '+(missed.length===1?'question':missed.length+' questions')+' you missed',on:{click:function(){review(missed,0);}}}),
+        h('button',{'class':'go alt',type:'button',text:'Start again from 0',on:{click:restart}})
+      ]:[h('button',{'class':'go',type:'button',text:'Play again',on:{click:restart}})])
     ]);
+  }
+  /* retake the missed questions one after another, then come back to the results */
+  function review(list,k){
+    if(k>=list.length){end();return;}
+    play(list[k],function(){review(list,k+1);},true);
   }
 
   /* the first option in every list is the correct one; lists are shuffled when shown */
   document.getElementById('restart').addEventListener('click',restart);
   var saved=loadProgress();
   if(saved){
-    st.i=saved.i;st.score=saved.score;st.guess=saved.guess;startBest=saved.startBest||0;
+    st.i=saved.i;st.score=saved.score;st.guess=saved.guess;st.got=saved.got;startBest=saved.startBest||0;
     st.i<Q.length?play():end();
   }else intro();
 })();
