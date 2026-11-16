@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How the Circulatory System Works</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: one fixed map of the journey, read in step order; a five-step control strip and caption sit under it. */
+:root{
+  --bg:#f2f5f4; --panel:#ffffff; --ink:#16282b; --muted:#587074; --line:#c9d6d6;
+  --cell:#e3f0ee; --cell-edge:#8fb8b3; --mito:#f8dccf; --mito-ink:#b5553a; --blood:#f3d3d3;
+  --glucose:#3f62d6; --fat:#c2488a; --amino:#5f9420; --carrier:#12909a; --proton:#8556d8;
+  --gas:#7c8f96; --atp:#e39a0c; --atp-ink:#8a5a00;
+  --rich:#d23b3b; --poor:#3f5fc9; --o2:#e0552f; --co2:#5d7f9c; --food:#a9743a; --waste:#6b4a2a;
+  --water:#2f9fd0; --gland:#f3e2a8; --bread:#e3b877; --egg:#fffdf5; --medal:#e39a0c;
+  --good:#2f7d3a; --good-bg:#e2f2e0; --bad:#b3402e; --bad-bg:#fae4df;
+  --display:"Bricolage Grotesque","Trebuchet MS",sans-serif;
+  --body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root{ color-scheme:dark;
+  --bg:#0f1a1c; --panel:#17272a; --ink:#e6f0ef; --muted:#93aaad; --line:#2f4649;
+  --cell:#16302f; --cell-edge:#3f7a74; --mito:#44271f; --mito-ink:#f09a7c; --blood:#4a2428;
+  --glucose:#8fa6ff; --fat:#f08cc0; --amino:#a6d65a; --carrier:#4fd0d8; --proton:#b99aff;
+  --gas:#9fb2b8; --atp:#ffc24a; --atp-ink:#ffd98a;
+  --rich:#ff7a70; --poor:#8fa6ff; --o2:#ff9a6a; --co2:#9fc0dc; --food:#d9a56a; --waste:#b08a62;
+  --water:#6cc6ee; --gland:#6a5a22; --bread:#c79a5a; --egg:#f3efe2; --medal:#ffc24a;
+  --good:#8fd69a; --good-bg:#173a20; --bad:#f5a090; --bad-bg:#4a211a; } }
+*{box-sizing:border-box}
+html,body{margin:0}
+.home-link{align-self:flex-start;font:500 14px var(--body);color:var(--muted);text-decoration:none}
+.home-link:hover{color:var(--ink);text-decoration:underline}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+main{max-width:1080px;margin:0 auto;padding:28px 20px 40px;display:flex;flex-direction:column;gap:18px}
+h1{font-family:var(--display);font-size:clamp(28px,4.2vw,40px);line-height:1.1;margin:0;text-wrap:balance;letter-spacing:-.01em}
+.lede{margin:6px 0 0;color:var(--muted);max-width:62ch}
+.stage-wrap{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow-x:auto}
+svg#map{display:block;width:100%;min-width:560px;max-height:78vh;height:auto}
+svg text{font-family:var(--body);fill:var(--ink)}
+.lbl{font-size:14px;font-weight:600}
+.sub{font-size:12px;fill:var(--muted)}
+.box{fill:var(--panel);stroke:var(--ink);stroke-width:1.5}
+.organ{fill:var(--mito);stroke:var(--mito-ink);stroke-width:2}
+.route{fill:none;stroke:var(--line);stroke-width:1.5;stroke-dasharray:3 5}
+[data-s]{transition:opacity .5s ease}
+.off{opacity:.2}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button{font:500 14px var(--body);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer}
+button:hover{border-color:var(--ink)}
+button:focus-visible{outline:2px solid var(--atp);outline-offset:2px}
+button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button .n{font-variant-numeric:tabular-nums;opacity:.65;margin-right:6px}
+#play{margin-left:auto;min-width:92px}
+.bar{height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--atp)}
+.caption{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:start;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.caption h2{font-family:var(--display);font-size:22px;margin:0 0 4px;line-height:1.2}
+.caption p{margin:0;max-width:65ch}
+.tally{border-left:3px solid var(--atp);padding-left:14px;width:190px}
+.tally b{display:block;font-family:var(--display);font-size:28px;line-height:1.1;color:var(--atp-ink);font-variant-numeric:tabular-nums}
+.tally span{font-size:13px;color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted);margin:0;padding:0;list-style:none}
+.legend li{display:flex;align-items:center;gap:6px}
+.legend svg{width:22px;height:16px}
+@media (max-width:640px){.caption{grid-template-columns:1fr}.tally{width:auto}#play{margin-left:0}}
+.heart{animation:beat 1s ease-in-out infinite;transform-origin:500px 280px}
+@keyframes beat{0%,60%,100%{transform:scale(1)}20%{transform:scale(1.035)}}
+svg#map.paused *{animation-play-state:paused}
+@media (prefers-reduced-motion: reduce){svg#map *{animation:none !important}}
+.pts-line{margin:0;font-size:14px;color:var(--muted)}
+.pts-line.won{color:var(--atp-ink);font-weight:600}
+button.seen::after{content:"✓";margin-left:6px}
+</style>
+</head>
+<body>
+<main>
+  <a class="home-link" href="index.html">← All pages</a>
+  <header>
+    <h1>How the Circulatory System Works</h1>
+    <p class="lede">Follow your blood on one full trip: heart, lungs, heart, body, and back again. Press Play and watch all five steps to earn 5 points.</p>
+  </header>
+
+  <div class="stage-wrap">
+    <svg id="map" viewBox="190 5 620 520" role="img" aria-label="Animated diagram of the circulatory system: the right side of the heart pumps oxygen-poor blood to the lungs, oxygen-rich blood returns to the left side of the heart, is pumped out to the body, and returns through veins to the right side.">
+<path data-s="2" d="M432,320 C300,330 290,100 420,90" fill="none" stroke="var(--poor)" stroke-width="16" stroke-linecap="round" opacity=".28"/><path data-s="3" d="M580,90 C710,100 700,230 568,235" fill="none" stroke="var(--rich)" stroke-width="16" stroke-linecap="round" opacity=".28"/><path data-s="4" d="M568,320 C700,330 720,470 590,470" fill="none" stroke="var(--rich)" stroke-width="16" stroke-linecap="round" opacity=".28"/><path data-s="5" d="M410,470 C270,470 280,245 432,235" fill="none" stroke="var(--poor)" stroke-width="16" stroke-linecap="round" opacity=".28"/>
+      <rect data-s="2,3" x="420" y="55" width="160" height="70" rx="30" fill="var(--cell)" stroke="var(--cell-edge)" stroke-width="2"/>
+      <rect data-s="4,5" x="410" y="435" width="180" height="70" rx="30" fill="var(--cell)" stroke="var(--cell-edge)" stroke-width="2"/>
+      <g class="heart">
+        <rect class="organ" x="430" y="205" width="140" height="150" rx="40"/>
+        <path d="M500,205 L500,355" stroke="var(--mito-ink)" stroke-width="3"/>
+        <path d="M432,270 L498,270 M502,270 L568,270" stroke="var(--mito-ink)" stroke-width="2" stroke-dasharray="5 4"/>
+      </g>
+      <g id="routes"></g>
+
+      <g id="parts"></g>
+
+      <g text-anchor="middle">
+        <text class="sub" x="471" y="232">Right</text><text class="sub" x="471" y="246">atrium</text>
+        <text class="sub" x="471" y="305">Right</text><text class="sub" x="471" y="319">ventricle</text>
+        <text class="sub" x="529" y="232">Left</text><text class="sub" x="529" y="246">atrium</text>
+        <text class="sub" x="529" y="305">Left</text><text class="sub" x="529" y="319">ventricle</text>
+        <text class="lbl" x="500" y="378">Heart</text>
+      </g>
+      <g data-s="2,3" text-anchor="middle"><text class="lbl" x="500" y="112">Lungs</text></g>
+      <g data-s="4,5" text-anchor="middle"><text class="lbl" x="500" y="492">Body cells</text></g>
+      <g data-s="2"><text class="sub" x="318" y="150" text-anchor="end">Pulmonary artery</text>
+        <text class="sub" x="462" y="30" text-anchor="end">O₂ in</text><text class="sub" x="538" y="30">CO₂ out</text></g>
+      <g data-s="3"><text class="sub" x="694" y="150">Pulmonary vein</text></g>
+      <g data-s="4"><text class="sub" x="708" y="395">Aorta, then</text><text class="sub" x="708" y="411">arteries</text></g>
+      <g data-s="5"><text class="sub" x="290" y="400" text-anchor="end">Veins</text></g>
+    </svg>
+  </div>
+
+  <ul class="legend" id="legend" aria-label="Legend"></ul>
+
+  <div class="controls" id="controls">
+    <button type="button" id="play" aria-label="Play animation">Play</button>
+  </div>
+  <div class="bar" aria-hidden="true"><i id="prog"></i></div>
+  <p class="pts-line" id="pts-line" aria-live="polite"></p>
+
+  <section class="caption" aria-live="polite">
+    <div>
+      <h2 id="cap-title"></h2>
+      <p id="cap-text"></p>
+    </div>
+    <div class="tally">
+      <b id="tally-n"></b>
+      <span id="tally-l"></span>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+  var NS='http://www.w3.org/2000/svg';
+  var STEPS=[{"name": "The heart", "text": "Your heart is a muscle about the size of your fist. It has four chambers. The two upper ones, the atria, receive blood. The two lower ones, the ventricles, pump it out. Valves keep the blood moving one way. Diagrams show the heart’s right side on the left, as if you are facing the person.", "big": "4", "small": "chambers in the heart"}, {"name": "To the lungs", "text": "Blood coming back from the body is low in oxygen. The right ventricle pumps it through the pulmonary artery to the lungs. There it picks up fresh oxygen and gets rid of carbon dioxide.", "big": "2", "small": "loops: one to the lungs, one to the rest of the body"}, {"name": "Back to the heart", "text": "Now rich in oxygen, the blood flows through the pulmonary veins into the left atrium, then down into the left ventricle, the strongest chamber of the heart.", "big": "60–100", "small": "heartbeats a minute at rest"}, {"name": "Out to the body", "text": "The left ventricle pumps blood into the aorta, the biggest artery. Arteries branch into smaller and smaller vessels until they become capillaries, so thin that oxygen and nutrients pass through their walls into your cells.", "big": "~5 L", "small": "of blood in an adult’s body"}, {"name": "The return trip", "text": "The blood has given up much of its oxygen and picked up carbon dioxide. Veins carry it back to the right atrium, and the loop starts again. At rest, one full trip takes about a minute.", "big": "~1 min", "small": "for blood to go all the way around"}];
+  var KINDS={"rich": {"shape": "disc", "color": "--rich", "size": 7, "label": "Oxygen-rich blood"}, "poor": {"shape": "disc", "color": "--poor", "size": 7, "label": "Oxygen-poor blood"}, "o2": {"shape": "circle", "color": "--o2", "size": 4, "label": "Oxygen"}, "co2": {"shape": "circle", "color": "--co2", "size": 4, "label": "Carbon dioxide"}};
+  // kind, path, count, seconds per trip, steps it belongs to
+  var STREAMS=[["poor", "M444,222 L444,338", 2, 2.5, [1, 2, 5]], ["rich", "M556,222 L556,338", 2, 2.5, [1, 3, 4]], ["poor", "M432,320 C300,330 290,100 420,90", 5, 5, [2]], ["poor", "M420,90 C450,80 470,76 500,76", 2, 2, [2, 3]], ["rich", "M500,76 C530,76 550,80 580,90", 2, 2, [2, 3]], ["o2", "M470,15 L470,72", 2, 2.5, [2]], ["co2", "M530,72 L530,15", 2, 2.5, [2]], ["rich", "M580,90 C710,100 700,230 568,235", 5, 5, [3]], ["rich", "M568,320 C700,330 720,470 590,470", 5, 5, [4]], ["rich", "M590,470 C560,458 530,454 500,454", 2, 2, [4, 5]], ["poor", "M500,454 C470,454 440,458 410,470", 2, 2, [4, 5]], ["poor", "M410,470 C270,470 280,245 432,235", 5, 5, [5]]];
+  function el(n,a){var e=document.createElementNS(NS,n);for(var k in a)e.setAttribute(k,a[k]);return e;}
+  function poly(n,r,r2,rot){var p=[];for(var i=0;i<n;i++){var a=rot+i*2*Math.PI/n,rr=(r2&&i%2)?r2:r;p.push((rr*Math.cos(a)).toFixed(1)+','+(rr*Math.sin(a)).toFixed(1));}return p.join(' ');}
+  function shape(name){
+    var k=KINDS[name],c='var('+k.color+')',s=k.size;
+    switch(k.shape){
+      case 'disc':return el('ellipse',{rx:s,ry:(s*.7).toFixed(1),fill:c});
+      case 'hex':return el('polygon',{points:poly(6,s,0,Math.PI/2),fill:c});
+      case 'tri':return el('polygon',{points:poly(3,s,0,-Math.PI/2),fill:c});
+      case 'bar':return el('rect',{x:-s*1.3,y:-s/2,width:s*2.6,height:s,rx:s/2,fill:c});
+      case 'diamond':return el('polygon',{points:poly(4,s,0,0),fill:c});
+      case 'star':return el('polygon',{points:poly(10,s,s*.45,-Math.PI/2),fill:c,stroke:'var(--atp-ink)','stroke-width':.8});
+      case 'ring':return el('circle',{r:s,fill:'var(--panel)',stroke:c,'stroke-width':2});
+      default:return el('circle',{r:s,fill:c});
+    }
+  }
+  var legend=document.getElementById('legend');
+  Object.keys(KINDS).forEach(function(name){
+    if(!KINDS[name].label)return;
+    var li=document.createElement('li'),sv=el('svg',{viewBox:'-11 -8 22 16','aria-hidden':'true'});
+    sv.appendChild(shape(name));li.appendChild(sv);li.appendChild(document.createTextNode(KINDS[name].label));legend.appendChild(li);
+  });
+  var routes=document.getElementById('routes'),parts=document.getElementById('parts'),items=[];
+  STREAMS.forEach(function(s){
+    var p=el('path',{d:s[1],'class':'route','data-s':s[4].join(',')});
+    routes.appendChild(p);
+    var len=p.getTotalLength();
+    var g=el('g',{'data-s':s[4].join(',')});
+    parts.appendChild(g);
+    for(var i=0;i<s[2];i++){
+      var w=el('g',{});w.appendChild(shape(s[0]));g.appendChild(w);
+      items.push({node:w,path:p,len:len,dur:s[3],off:i/s[2]});
+    }
+  });
+  function place(t){
+    for(var i=0;i<items.length;i++){
+      var it=items[i],u=((t/it.dur)+it.off)%1,pt=it.path.getPointAtLength(u*it.len);
+      it.node.setAttribute('transform','translate('+pt.x.toFixed(1)+','+pt.y.toFixed(1)+')');
+      it.node.setAttribute('opacity',Math.min(1,u*8,(1-u)*8).toFixed(2));
+    }
+  }
+  var controls=document.getElementById('controls'),playBtn=document.getElementById('play'),btns=[];
+  STEPS.forEach(function(s,i){
+    var b=document.createElement('button');b.type='button';b.id='step-'+(i+1);
+    b.innerHTML='<span class="n">'+(i+1)+'</span>';b.appendChild(document.createTextNode(s.name));
+    b.addEventListener('click',function(){setStep(i);stepStart=clock;ended=false;});
+    controls.insertBefore(b,playBtn);btns.push(b);
+  });
+  var staged=[].slice.call(document.querySelectorAll('[data-s]'));
+  var step=0;
+  function setStep(i){
+    step=i;var n=String(i+1);
+    staged.forEach(function(e){e.classList.toggle('off',e.getAttribute('data-s').split(',').indexOf(n)<0);});
+    btns.forEach(function(b,k){b.setAttribute('aria-pressed',k===i?'true':'false');});
+    document.getElementById('cap-title').textContent=(i+1)+'. '+STEPS[i].name;
+    document.getElementById('cap-text').textContent=STEPS[i].text;
+    document.getElementById('tally-n').textContent=STEPS[i].big;
+    document.getElementById('tally-l').textContent=STEPS[i].small;
+  }
+  var HOLD=10,clock=0,stepStart=0,last=null,prog=document.getElementById('prog');
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var playing=false; /* starts still; the learner presses Play */
+  function label(){document.getElementById('map').classList.toggle('paused',!playing);playBtn.textContent=playing?'Pause':'Play';playBtn.setAttribute('aria-label',playing?'Pause animation':'Play animation');}
+  playBtn.addEventListener('click',function(){
+    playing=!playing;last=null;
+    if(playing&&ended){ended=false;var n=0;for(var i=0;i<STEPS.length;i++)if(!seen[i]){n=i;break;}setStep(n);stepStart=clock;}
+    label();if(playing)requestAnimationFrame(tick);
+  });
+  /* Points: watching every step to the end earns 5 points, saved for the home page. */
+  var PAGE_ID='circulatory',PTS=5,seen=[],ended=false,ptsLine=document.getElementById('pts-line');
+  var T={"todo": "Watch all five steps to the end to earn 5 points.", "have": "5 / 5 points earned for this animation (saved).", "done": "You watched all five steps. 5 points earned and saved.", "already": "You watched all five steps again. You already have the 5 points for this animation.", "missing": "Almost there. Press Play to watch the steps you skipped: ", "missingEnd": ".", "nosave": "This browser window is not saving points. Try Chrome, Edge or Safari, outside private mode."};
+  function hasPts(){try{var r=JSON.parse(localStorage.getItem('study-points:'+PAGE_ID)||'null');return !!(r&&r.best>=PTS);}catch(e){return null;}}
+  function markSeen(){btns.forEach(function(b,i){b.classList.toggle('seen',!!seen[i]);});}
+  function finish(){
+    playing=false;last=null;ended=true;label();prog.style.width='100%';
+    var missing=[];for(var i=0;i<STEPS.length;i++)if(!seen[i])missing.push(i+1);
+    if(missing.length){ptsLine.textContent=T.missing+missing.join(', ')+T.missingEnd;return;}
+    var had=hasPts();
+    try{localStorage.setItem('study-points:'+PAGE_ID,JSON.stringify({best:PTS,max:PTS}));}catch(e){had=null;}
+    ptsLine.textContent=had===null?T.nosave:(had?T.already:T.done);
+    ptsLine.classList.toggle('won',had!==null);
+  }
+  (function(){var h=hasPts();ptsLine.textContent=h===null?T.nosave:(h?T.have:T.todo);ptsLine.classList.toggle('won',!!h);})();
+  function tick(now){
+    if(!playing)return;
+    if(last!==null)clock+=Math.min(.1,(now-last)/1000);
+    last=now;
+    if(clock-stepStart>=HOLD){
+      seen[step]=true;markSeen();
+      if(step===STEPS.length-1){finish();return;}
+      setStep(step+1);stepStart=clock;
+    }
+    prog.style.width=((clock-stepStart)/HOLD*100).toFixed(1)+'%';
+    place(clock);
+    requestAnimationFrame(tick);
+  }
+  var start=parseInt((location.hash||'').replace('#step-',''),10);
+  setStep(start>=1&&start<=STEPS.length?start-1:0);place(1.3);label();
+  if(location.hash.indexOf('#step-')===0){playing=false;label();}
+  if(playing)requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cell Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a mission card under a status strip (three-level route + points meter). Level 1 is a card grid; levels 2 and 3 share one cell diagram. */
+:root{
+  --bg:#f2f5f4; --panel:#ffffff; --ink:#16282b; --muted:#587074; --line:#c9d6d6;
+  --cell:#e3f0ee; --cell-edge:#8fb8b3; --mito:#f8dccf; --mito-ink:#b5553a; --blood:#f3d3d3;
+  --glucose:#3f62d6; --fat:#c2488a; --amino:#5f9420; --carrier:#12909a; --proton:#8556d8;
+  --gas:#7c8f96; --atp:#e39a0c; --atp-ink:#8a5a00;
+  --rich:#d23b3b; --poor:#3f5fc9; --o2:#e0552f; --co2:#5d7f9c; --food:#a9743a; --waste:#6b4a2a;
+  --water:#2f9fd0; --gland:#f3e2a8; --bread:#e3b877; --egg:#fffdf5; --medal:#e39a0c;
+  --good:#2f7d3a; --good-bg:#e2f2e0; --bad:#b3402e; --bad-bg:#fae4df;
+  --display:"Bricolage Grotesque","Trebuchet MS",sans-serif;
+  --body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root{ color-scheme:dark;
+  --bg:#0f1a1c; --panel:#17272a; --ink:#e6f0ef; --muted:#93aaad; --line:#2f4649;
+  --cell:#16302f; --cell-edge:#3f7a74; --mito:#44271f; --mito-ink:#f09a7c; --blood:#4a2428;
+  --glucose:#8fa6ff; --fat:#f08cc0; --amino:#a6d65a; --carrier:#4fd0d8; --proton:#b99aff;
+  --gas:#9fb2b8; --atp:#ffc24a; --atp-ink:#ffd98a;
+  --rich:#ff7a70; --poor:#8fa6ff; --o2:#ff9a6a; --co2:#9fc0dc; --food:#d9a56a; --waste:#b08a62;
+  --water:#6cc6ee; --gland:#6a5a22; --bread:#c79a5a; --egg:#f3efe2; --medal:#ffc24a;
+  --good:#8fd69a; --good-bg:#173a20; --bad:#f5a090; --bad-bg:#4a211a; } }
+*{box-sizing:border-box}
+html,body{margin:0}
+.home-link{align-self:flex-start;font:500 14px var(--body);color:var(--muted);text-decoration:none}
+.home-link:hover{color:var(--ink);text-decoration:underline}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5}
+main{max-width:860px;margin:0 auto;padding:24px 18px 48px;display:flex;flex-direction:column;gap:16px}
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+h1{font-family:var(--display);font-size:30px;line-height:1.1;margin:0;letter-spacing:-.01em}
+.meter{display:flex;align-items:center;gap:10px;min-width:220px;flex:1;max-width:400px}
+.meter .track{flex:1;height:14px;border-radius:7px;background:var(--line);overflow:hidden}
+.meter .fill{height:100%;width:0;background:var(--atp);transition:width .5s ease}
+.meter b{font-family:var(--display);font-size:20px;color:var(--atp-ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.best{font-size:14px;color:var(--muted);margin:-6px 0 0}
+.route{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:0;padding:0;font-size:13px}
+.route li{padding:5px 11px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--panel)}
+.route li.now{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
+.route li.past{border-color:var(--cell-edge);color:var(--ink);background:var(--cell)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:16px}
+.where{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin:0}
+h2{font-family:var(--display);font-size:24px;line-height:1.2;margin:0;text-wrap:balance}
+h2 em{font-style:normal;color:var(--atp-ink)}
+p{margin:0;max-width:62ch}
+.qhead{display:flex;gap:18px;align-items:center}
+.qhead>div:first-child{flex:1;display:flex;flex-direction:column;gap:10px}
+.hero{flex:0 0 190px;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:8px}
+.hero svg{display:block;width:100%;height:auto}
+.organ{fill:var(--mito);stroke:var(--mito-ink);stroke-width:2.5}
+button{font:500 16px var(--body);color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:12px 16px;cursor:pointer;text-align:left}
+button:hover:not(:disabled){border-color:var(--ink)}
+button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--atp);outline-offset:2px}
+button.right{background:var(--good-bg);border-color:var(--good);color:var(--ink)}
+button.wrong{background:var(--bad-bg);border-color:var(--bad);color:var(--muted);text-decoration:line-through}
+button:disabled{cursor:default}
+button.go{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600;align-self:flex-start;text-align:center;padding:12px 22px}
+button.restart{font-size:14px;padding:6px 12px;border-radius:999px;background:var(--panel)}
+.opts{display:flex;flex-direction:column;gap:10px}
+.shake{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.fb{border-radius:12px;padding:12px 16px;border-left:5px solid var(--line);background:var(--bg)}
+.fb:empty{display:none}
+.fb.ok{border-color:var(--good);background:var(--good-bg)}
+.fb.no{border-color:var(--bad);background:var(--bad-bg)}
+.fb strong{display:block}
+.stars{display:inline-flex;vertical-align:-3px;margin-right:8px}
+.stars svg{width:20px;height:20px;animation:pop .4s backwards}
+@keyframes pop{0%{transform:scale(0)}70%{transform:scale(1.3)}100%{transform:scale(1)}}
+.big{font-family:var(--display);font-size:44px;line-height:1;color:var(--atp-ink);font-variant-numeric:tabular-nums}
+
+/* Level 1 cards */
+.deck{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.flip{min-height:150px;padding:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;font-size:14px;line-height:1.35;background:var(--panel)}
+.flip svg{width:110px;height:55px;flex:none}
+.flip.down{background:var(--cell);border-style:dashed;border-color:var(--cell-edge);font-family:var(--display);font-size:34px;color:var(--cell-edge)}
+.flip.miss{background:var(--bad-bg);border-color:var(--bad)}
+
+/* Cell diagram (levels 2 and 3) */
+.scene{background:var(--bg);border:1px solid var(--line);border-radius:14px;overflow-x:auto}
+.scene svg{display:block;width:100%;height:auto;max-height:60vh}
+.scene.wide svg{min-width:600px}
+.scene text{font-family:var(--body);fill:var(--ink);font-size:13px;font-weight:600}
+.scene .sub{font-weight:400;fill:var(--muted);font-size:12px}
+.mv{transition:transform 1s ease,opacity .6s ease}
+.pin circle{fill:var(--ink)} .pin text{fill:var(--bg);font-size:13px;font-weight:600}
+.pick .part{cursor:pointer}
+.pick .part:hover,.pick .pin:hover{filter:brightness(1.08)}
+.part.hit{filter:drop-shadow(0 0 6px var(--good))}
+.lab{opacity:0;transition:opacity .4s}
+.lab.on{opacity:1}
+@media (max-width:640px){.deck{grid-template-columns:repeat(2,1fr)}.qhead{flex-direction:column-reverse;align-items:stretch}.hero{flex:none;width:100%;max-width:240px;align-self:center}.card{padding:18px}}
+@media (prefers-reduced-motion: reduce){.shake,.stars svg{animation:none}.mv,.meter .fill{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <a class="home-link" href="index.html">← All pages</a>
+  <div class="top">
+    <h1>Cell Explorer</h1>
+    <div class="meter" aria-label="Points earned">
+      <div class="track"><div class="fill" id="fill"></div></div>
+      <b id="score">0 points</b>
+      <button type="button" class="restart" id="restart">Restart</button>
+    </div>
+  </div>
+  <p class="best" id="best"></p>
+  <ol class="route" id="route" aria-label="Levels"></ol>
+  <section class="card" id="card"></section>
+</main>
+
+<script>
+(function(){
+  var CFG={
+ "pageId": "cell-explorer",
+ "terms": [
+  {
+   "t": "Molecule",
+   "m": "A tiny particle made of atoms joined together",
+   "why": "Glucose, starch, protein, oxygen and carbon dioxide are all molecules.",
+   "art": "<path d=\"M40,34 L62,22 M40,34 L80,40\" stroke=\"var(--ink)\" stroke-width=\"3\"/><circle cx=\"40\" cy=\"34\" r=\"12\" fill=\"var(--poor)\"/><circle cx=\"62\" cy=\"22\" r=\"8\" fill=\"var(--rich)\"/><circle cx=\"80\" cy=\"40\" r=\"8\" fill=\"var(--rich)\"/>"
+  },
+  {
+   "t": "Carbohydrate",
+   "m": "The food group that includes sugars and starch",
+   "why": "Carbohydrates are your body’s main fuel. Starch and glucose are both carbohydrates.",
+   "art": "<rect x=\"22\" y=\"13\" width=\"36\" height=\"34\" rx=\"9\" fill=\"var(--bread)\" stroke=\"var(--food)\" stroke-width=\"3\"/><polygon points=\"78.0,33.0 70.2,28.5 70.2,19.5 78.0,15.0 85.8,19.5 85.8,28.5\" fill=\"var(--glucose)\"/><polygon points=\"96.0,33.0 88.2,28.5 88.2,19.5 96.0,15.0 103.8,19.5 103.8,28.5\" fill=\"var(--glucose)\"/><polygon points=\"87.0,51.0 79.2,46.5 79.2,37.5 87.0,33.0 94.8,37.5 94.8,46.5\" fill=\"var(--glucose)\"/>"
+  },
+  {
+   "t": "Starch",
+   "m": "A long chain of glucose units, found in bread, rice and potatoes",
+   "why": "Plants store energy as starch. Your body cuts it back into glucose.",
+   "art": "<path d=\"M16,30 L104,30\" stroke=\"var(--ink)\" stroke-width=\"2.5\"/><polygon points=\"16.0,39.0 8.2,34.5 8.2,25.5 16.0,21.0 23.8,25.5 23.8,34.5\" fill=\"var(--glucose)\"/><polygon points=\"38.0,39.0 30.2,34.5 30.2,25.5 38.0,21.0 45.8,25.5 45.8,34.5\" fill=\"var(--glucose)\"/><polygon points=\"60.0,39.0 52.2,34.5 52.2,25.5 60.0,21.0 67.8,25.5 67.8,34.5\" fill=\"var(--glucose)\"/><polygon points=\"82.0,39.0 74.2,34.5 74.2,25.5 82.0,21.0 89.8,25.5 89.8,34.5\" fill=\"var(--glucose)\"/><polygon points=\"104.0,39.0 96.2,34.5 96.2,25.5 104.0,21.0 111.8,25.5 111.8,34.5\" fill=\"var(--glucose)\"/>"
+  },
+  {
+   "t": "Glucose",
+   "m": "A simple sugar that cells use as fuel",
+   "why": "Glucose is the sugar your blood carries to every cell.",
+   "art": "<polygon points=\"60.0,47.0 45.3,38.5 45.3,21.5 60.0,13.0 74.7,21.5 74.7,38.5\" fill=\"var(--glucose)\"/>"
+  },
+  {
+   "t": "Protein",
+   "m": "A long chain of amino acids, used to build and repair the body",
+   "why": "Muscles, hair and enzymes are all made of protein.",
+   "art": "<path d=\"M18,30 L35,40 L52,35 L69,23 L86,21 L103,32\" fill=\"none\" stroke=\"var(--ink)\" stroke-width=\"2.5\"/><circle cx=\"18\" cy=\"30\" r=\"7.5\" fill=\"var(--carrier)\"/><circle cx=\"35\" cy=\"40\" r=\"7.5\" fill=\"var(--carrier)\"/><circle cx=\"52\" cy=\"35\" r=\"7.5\" fill=\"var(--carrier)\"/><circle cx=\"69\" cy=\"23\" r=\"7.5\" fill=\"var(--carrier)\"/><circle cx=\"86\" cy=\"21\" r=\"7.5\" fill=\"var(--carrier)\"/><circle cx=\"103\" cy=\"32\" r=\"7.5\" fill=\"var(--carrier)\"/>"
+  },
+  {
+   "t": "Amino acid",
+   "m": "One of the small building blocks of a protein",
+   "why": "There are 20 kinds of amino acid. Their order decides which protein you get.",
+   "art": "<circle cx=\"60\" cy=\"30\" r=\"13\" fill=\"var(--carrier)\"/>"
+  },
+  {
+   "t": "Enzyme",
+   "m": "A protein that speeds up a reaction, such as cutting food molecules apart",
+   "why": "Each enzyme does one job. The enzyme in your saliva cuts starch.",
+   "art": "<path d=\"M52,30 L66.5,20 A18,18 0 1 0 66.5,40 Z\" fill=\"var(--fat)\"/><path d=\"M78,30 L104,30\" stroke=\"var(--ink)\" stroke-width=\"2.5\" stroke-dasharray=\"3 4\"/><polygon points=\"80.0,39.0 72.2,34.5 72.2,25.5 80.0,21.0 87.8,25.5 87.8,34.5\" fill=\"var(--glucose)\"/><polygon points=\"104.0,39.0 96.2,34.5 96.2,25.5 104.0,21.0 111.8,25.5 111.8,34.5\" fill=\"var(--glucose)\"/>"
+  }
+ ],
+ "questions": [
+  {
+   "lv": 0,
+   "type": "find"
+  },
+  {
+   "lv": 0,
+   "type": "find"
+  },
+  {
+   "lv": 0,
+   "type": "find"
+  },
+  {
+   "lv": 0,
+   "type": "find"
+  },
+  {
+   "lv": 0,
+   "type": "find"
+  },
+  {
+   "lv": 0,
+   "type": "find"
+  },
+  {
+   "lv": 0,
+   "type": "find"
+  },
+  {
+   "lv": 1,
+   "type": "click",
+   "part": "nucleus",
+   "q": "Click the nucleus.",
+   "hint": "It is large and round.",
+   "why": "The nucleus is the large round part, usually near the middle of the cell."
+  },
+  {
+   "lv": 1,
+   "type": "choice",
+   "q": "What does the nucleus do?",
+   "opts": [
+    "Controls the cell and holds its DNA",
+    "Controls what enters and leaves the cell",
+    "Fills the cell; many reactions happen in it",
+    "Releases energy from glucose and makes ATP"
+   ],
+   "hint": "Think about where this part is and what it looks like.",
+   "why": "The nucleus holds DNA, the instructions for everything the cell does."
+  },
+  {
+   "lv": 1,
+   "type": "click",
+   "part": "membrane",
+   "q": "Click the cell membrane.",
+   "hint": "It wraps around the whole cell.",
+   "why": "The cell membrane is the thin outer layer around the whole cell."
+  },
+  {
+   "lv": 1,
+   "type": "choice",
+   "q": "What does the cell membrane do?",
+   "opts": [
+    "Controls what enters and leaves the cell",
+    "Controls the cell and holds its DNA",
+    "Fills the cell; many reactions happen in it",
+    "Releases energy from glucose and makes ATP"
+   ],
+   "hint": "Think about where this part is and what it looks like.",
+   "why": "The membrane lets useful things such as glucose and oxygen in, and lets waste out."
+  },
+  {
+   "lv": 1,
+   "type": "click",
+   "part": "cytoplasm",
+   "q": "Click the cytoplasm.",
+   "hint": "It is not a solid part. It fills the space between the others.",
+   "why": "The cytoplasm is the jelly-like fluid that fills the inside of the cell."
+  },
+  {
+   "lv": 1,
+   "type": "choice",
+   "q": "What does the cytoplasm do?",
+   "opts": [
+    "Fills the cell; many reactions happen in it",
+    "Controls the cell and holds its DNA",
+    "Controls what enters and leaves the cell",
+    "Releases energy from glucose and makes ATP"
+   ],
+   "hint": "Think about where this part is and what it looks like.",
+   "why": "Many of the cell’s chemical reactions happen in the cytoplasm, and the other parts float in it."
+  },
+  {
+   "lv": 1,
+   "type": "click",
+   "part": "mito",
+   "q": "Click the mitochondrion.",
+   "hint": "It is bean-shaped, with folds inside.",
+   "why": "The mitochondrion is the bean-shaped part with a folded lining inside."
+  },
+  {
+   "lv": 1,
+   "type": "choice",
+   "q": "What does the mitochondrion do?",
+   "opts": [
+    "Releases energy from glucose and makes ATP",
+    "Controls the cell and holds its DNA",
+    "Controls what enters and leaves the cell",
+    "Fills the cell; many reactions happen in it"
+   ],
+   "hint": "Think about where this part is and what it looks like.",
+   "why": "Mitochondria use oxygen to release the energy in glucose, and store it in ATP."
+  },
+  {
+   "lv": 2,
+   "type": "choice",
+   "q": "A chain of starch is too big to get into the cell. What do you use to cut it into pieces?",
+   "opts": [
+    "An enzyme",
+    "Oxygen",
+    "ATP"
+   ],
+   "hint": "It is a protein that speeds up a reaction.",
+   "why": "An enzyme cuts the starch chain apart, one link at a time."
+  },
+  {
+   "lv": 2,
+   "type": "choice",
+   "q": "The starch is in pieces. What is each small piece called?",
+   "opts": [
+    "Glucose",
+    "Amino acid",
+    "Carbon dioxide"
+   ],
+   "hint": "Starch is a chain of this simple sugar.",
+   "why": "Starch is a chain of glucose, so cutting it up gives single glucose molecules."
+  },
+  {
+   "lv": 2,
+   "type": "choice",
+   "q": "Another enzyme cuts up the protein chain. What are its pieces called?",
+   "opts": [
+    "Amino acids",
+    "Glucose",
+    "Starch"
+   ],
+   "hint": "They are the building blocks of protein.",
+   "why": "Proteins are chains of amino acids, so cutting one up gives single amino acids."
+  },
+  {
+   "lv": 2,
+   "type": "click",
+   "part": "membrane",
+   "q": "The glucose needs to get inside. Click the part of the cell it has to cross.",
+   "hint": "It is the outer layer that controls what goes in and out.",
+   "why": "Glucose crosses the cell membrane and is now in the cytoplasm."
+  },
+  {
+   "lv": 2,
+   "type": "click",
+   "part": "mito",
+   "q": "Click the part of the cell where most of the energy in glucose is released.",
+   "hint": "It is often called the powerhouse of the cell.",
+   "why": "The glucose is broken down, and the job is finished inside the mitochondrion."
+  },
+  {
+   "lv": 2,
+   "type": "choice",
+   "q": "The mitochondrion needs a gas to release the energy. Which gas do you send in?",
+   "opts": [
+    "Oxygen",
+    "Carbon dioxide",
+    "Nitrogen"
+   ],
+   "hint": "It is the gas your body takes from the air you breathe in.",
+   "why": "Oxygen from the air you breathe travels in your blood to every cell."
+  },
+  {
+   "lv": 2,
+   "type": "choice",
+   "q": "Energy is released from the glucose. Which molecule does the cell store that energy in, ready to use?",
+   "opts": [
+    "ATP",
+    "Starch",
+    "Enzyme"
+   ],
+   "hint": "It works like a tiny rechargeable battery.",
+   "why": "ATP carries energy to wherever the cell needs it: moving, growing, sending signals."
+  },
+  {
+   "lv": 2,
+   "type": "choice",
+   "q": "Releasing the energy makes a waste gas. Which gas leaves the cell?",
+   "opts": [
+    "Carbon dioxide",
+    "Oxygen",
+    "Glucose"
+   ],
+   "hint": "It is the gas you breathe out.",
+   "why": "Carbon dioxide leaves the cell, travels in the blood to the lungs, and is breathed out."
+  },
+  {
+   "lv": 2,
+   "type": "choice",
+   "q": "The amino acids come into the cell too. What does the cell do with them?",
+   "opts": [
+    "Joins them together to build new proteins",
+    "Turns them into oxygen",
+    "Sends them straight out as waste"
+   ],
+   "hint": "They are building blocks.",
+   "why": "The cell joins amino acids into new proteins, following instructions from the DNA in the nucleus."
+  },
+  {
+   "lv": 2,
+   "type": "choice",
+   "q": "Last one. Starch and glucose both belong to which group of nutrients?",
+   "opts": [
+    "Carbohydrates",
+    "Proteins",
+    "Enzymes"
+   ],
+   "hint": "It is the food group that includes sugars.",
+   "why": "Starch and glucose are both carbohydrates. Starch is the big one, glucose the small one."
+  }
+ ],
+ "levels": [
+  {
+   "name": "Match the molecules",
+   "intro": "Seven cards each show what a word means. Study them, then they turn face down. For each word, turn over the card with its meaning. Find it on your first flip to earn the point."
+  },
+  {
+   "name": "Label the cell",
+   "intro": "Here is a cell with four parts, marked A to D. Click each part when asked, then say what it does."
+  },
+  {
+   "name": "Feed the cell",
+   "intro": "Starch and protein are waiting outside the cell. Make the right call at each step to turn them into energy the cell can use."
+  }
+ ],
+ "ranks": [
+  "Cell Expert",
+  "Molecule Maker",
+  "Cell Rookie"
+ ]
+};
+  var MEDAL="<path d=\"M70,4 L92,58 L108,58 L130,4 L112,4 L100,34 L88,4 Z\" fill=\"var(--rich)\"/><circle cx=\"100\" cy=\"84\" r=\"38\" fill=\"var(--medal)\" stroke=\"var(--ink)\" stroke-width=\"3\"/><circle cx=\"100\" cy=\"84\" r=\"28\" fill=\"none\" stroke=\"#000\" stroke-opacity=\".2\" stroke-width=\"2\"/><polygon points=\"100.0,66.0 104.7,77.5 117.1,78.4 107.6,86.5 110.6,98.6 100.0,92.0 89.4,98.6 92.4,86.5 82.9,78.4 95.3,77.5\" fill=\"var(--panel)\" opacity=\".9\"/>",HERO="<rect x=\"10\" y=\"10\" width=\"180\" height=\"110\" rx=\"46\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"4\"/><circle cx=\"70\" cy=\"62\" r=\"26\" fill=\"var(--proton)\" opacity=\".55\"/><circle cx=\"70\" cy=\"62\" r=\"10\" fill=\"var(--proton)\"/><g transform=\"translate(108 50) scale(.42)\"><rect x=\"22\" y=\"26\" width=\"156\" height=\"80\" rx=\"40\" fill=\"var(--mito)\" stroke=\"var(--mito-ink)\" stroke-width=\"3\"/><path d=\"M42,70 q10,-34 20,0 t20,0 t20,0 t20,0 t20,0 t20,0\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/></g><g transform=\"translate(96 76) scale(.3) rotate(20 100 65)\"><rect x=\"22\" y=\"26\" width=\"156\" height=\"80\" rx=\"40\" fill=\"var(--mito)\" stroke=\"var(--mito-ink)\" stroke-width=\"3\"/><path d=\"M42,70 q10,-34 20,0 t20,0 t20,0 t20,0 t20,0 t20,0\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/></g><circle cx=\"40\" cy=\"96\" r=\"4\" fill=\"var(--cell-edge)\"/><circle cx=\"150\" cy=\"34\" r=\"4\" fill=\"var(--cell-edge)\"/><circle cx=\"124\" cy=\"34\" r=\"3\" fill=\"var(--cell-edge)\"/>";
+  var TERMS=CFG.terms,Q=CFG.questions,LEVELS=CFG.levels,MAX=Q.length,PAGE_ID=CFG.pageId; /* one question, one point */
+  var card=document.getElementById('card'),route=document.getElementById('route');
+  var st={i:-1,score:0,order:[],cards:[]},startBest=0,introSeen={},peeked=false;
+
+  /* ---------- saved points (best score, used by the home page) and the latest try ---------- */
+  var KEY='study-points:'+PAGE_ID,PKEY='study-progress:'+PAGE_ID;
+  function readBest(){
+    try{
+      var r=JSON.parse(localStorage.getItem(KEY)||'null');
+      if(!r||typeof r.best!=='number')return 0;
+      return Math.max(0,Math.min(r.best,MAX));
+    }catch(e){return null;}
+  }
+  function saveBest(score){
+    try{var cur=readBest();if(cur===null)return false;
+      if(score>cur)localStorage.setItem(KEY,JSON.stringify({best:score,max:MAX,s:1}));
+      return true;
+    }catch(e){return false;}
+  }
+  function saveProgress(i){
+    try{localStorage.setItem(PKEY,JSON.stringify({v:2,i:i,score:st.score,startBest:startBest,n:MAX,order:st.order,cards:st.cards}));}catch(e){}
+  }
+  function loadProgress(){
+    try{var p=JSON.parse(localStorage.getItem(PKEY)||'null');
+      if(p&&p.v===2&&p.n===MAX&&p.i>=0&&p.i<=MAX&&typeof p.score==='number'&&p.score>=0&&p.score<=MAX
+         &&Array.isArray(p.order)&&p.order.length===TERMS.length&&Array.isArray(p.cards)&&p.cards.length===TERMS.length)return p;
+    }catch(e){}
+    return null;
+  }
+  function restart(){
+    st={i:-1,score:0,order:[],cards:[]};introSeen={};peeked=false;
+    try{localStorage.removeItem(PKEY);}catch(e){}
+    intro();
+  }
+  function showBest(){
+    var b=readBest(),el=document.getElementById('best');
+    el.textContent=b===null?'This browser window is not saving points. Try Chrome, Edge or Safari, outside private mode.'
+      :(b?'Your best score so far: '+b+' / '+MAX+' (saved). This is what counts on the home page.':'No score saved yet. Points are saved as you play.');
+  }
+
+  /* ---------- helpers ---------- */
+  function h(tag,attrs,kids){
+    var e=document.createElement(tag),k;
+    for(k in attrs||{}){
+      if(k==='text')e.textContent=attrs[k];
+      else if(k==='html')e.innerHTML=attrs[k];
+      else if(k==='on')for(var ev in attrs.on)e.addEventListener(ev,attrs.on[ev]);
+      else e.setAttribute(k,attrs[k]);
+    }
+    (kids||[]).forEach(function(c){e.appendChild(c);});
+    return e;
+  }
+  function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t;}return a;}
+  function shake(el){el.classList.remove('shake');void el.offsetWidth;el.classList.add('shake');}
+  function starHTML(on){return '<span class="stars" aria-hidden="true"><svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.4 14,11.6 15.6,18 10,14.4 4.4,18 6,11.6 1,7.4 7.4,7" fill="'+(on?'var(--atp)':'none')+'" stroke="var(--atp-ink)" stroke-width="1.2"/></svg></span>';}
+  function head(where,titleHTML,art){
+    var left=h('div',{},[h('p',{'class':'where',text:where}),h('h2',{html:titleHTML})]);
+    var kids=[left];
+    if(art)kids.push(h('div',{'class':'hero',html:'<svg viewBox="0 0 200 130" aria-hidden="true">'+art+'</svg>'}));
+    return h('div',{'class':'qhead'},kids);
+  }
+  function esc(s){return String(s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+
+  LEVELS.forEach(function(l,i){route.appendChild(h('li',{text:'Level '+(i+1)+': '+l.name}));});
+  function status(){
+    var cur=st.i<0?-1:(st.i>=MAX?LEVELS.length:Q[st.i].lv);
+    [].forEach.call(route.children,function(li,i){li.className=i===cur?'now':(i<cur?'past':'');});
+    document.getElementById('fill').style.width=(st.score/MAX*100)+'%';
+    document.getElementById('score').textContent=st.score+' '+(st.score===1?'point':'points');
+    showBest();
+  }
+  function show(nodes){card.innerHTML='';nodes.forEach(function(n){card.appendChild(n);});status();}
+  function levelStart(lv){for(var k=0;k<MAX;k++)if(Q[k].lv===lv)return k;return 0;}
+
+  /* ---------- the cell diagram ---------- */
+  var PART_NAME={nucleus:'Nucleus',membrane:'Cell membrane',cytoplasm:'Cytoplasm',mito:'Mitochondrion'};
+  var HEX='0,-15 13,-7.5 13,7.5 0,15 -13,7.5 -13,-7.5';
+  function sceneSVG(lv){
+    var s='<svg viewBox="'+(lv===1?'270 0 450 340':'0 0 720 340')+'" role="img" aria-label="Diagram of a cell">';
+    /* cell */
+    s+='<rect class="part" data-part="cytoplasm" x="300" y="30" width="400" height="280" rx="90" fill="var(--cell)"/>';
+    s+='<rect x="300" y="30" width="400" height="280" rx="90" fill="none" stroke="var(--cell-edge)" stroke-width="11"/>';
+    s+='<g class="part" data-part="nucleus"><circle cx="420" cy="170" r="55" fill="var(--proton)" opacity=".5"/><circle cx="420" cy="170" r="20" fill="var(--proton)"/></g>';
+    s+='<g class="part" data-part="mito"><rect x="540" y="130" width="120" height="64" rx="32" fill="var(--mito)" stroke="var(--mito-ink)" stroke-width="3"/>'
+      +'<path d="M556,164 q9,-28 18,0 t18,0 t18,0 t18,0 t18,0" fill="none" stroke="var(--mito-ink)" stroke-width="3" stroke-linecap="round"/></g>';
+    s+='<rect class="part" data-part="membrane" x="300" y="30" width="400" height="280" rx="90" fill="none" stroke="transparent" stroke-width="26" pointer-events="stroke"/>';
+    /* pins A-D (also work from the keyboard) */
+    [['A','cytoplasm',490,270],['B','mito',600,112],['C','membrane',676,62],['D','nucleus',420,98]].forEach(function(p){
+      s+='<g class="pin" data-part="'+p[1]+'" tabindex="0" role="button" aria-label="Part '+p[0]+'"><circle cx="'+p[2]+'" cy="'+p[3]+'" r="13"/><text x="'+p[2]+'" y="'+(p[3]+4.5)+'" text-anchor="middle">'+p[0]+'</text></g>';
+    });
+    /* part labels, shown once found (level 2 only) */
+    if(lv===1){
+      s+='<text class="lab" data-lab="nucleus" x="420" y="246" text-anchor="middle">Nucleus</text>';
+      s+='<text class="lab" data-lab="mito" x="600" y="216" text-anchor="middle">Mitochondrion</text>';
+      s+='<text class="lab" data-lab="membrane" x="560" y="20" text-anchor="middle">Cell membrane</text>';
+      s+='<text class="lab" data-lab="cytoplasm" x="540" y="292" text-anchor="middle">Cytoplasm</text>';
+    }
+    if(lv===2){
+      /* food outside the cell */
+      s+='<text x="110" y="52" text-anchor="middle" id="t-starch">Starch</text><text x="110" y="208" text-anchor="middle" id="t-protein">Protein</text>';
+      s+='<path id="l-starch" class="mv" d="M38,90 L182,90" stroke="var(--ink)" stroke-width="3"/>';
+      s+='<path id="l-protein" class="mv" d="M38,246 L182,246" stroke="var(--ink)" stroke-width="3"/>';
+      for(var i=0;i<5;i++)s+='<polygon id="g'+i+'" class="mv" points="'+HEX+'" fill="var(--glucose)"/>';
+      s+='<path id="l-new" class="mv" d="M340,268 L404,268" stroke="var(--ink)" stroke-width="3"/>';
+      for(i=0;i<5;i++)s+='<circle id="a'+i+'" class="mv" r="13" fill="var(--carrier)"/>';
+      s+='<path id="enz1" class="mv" d="M0,0 L14.5,-10 A18,18 0 1 0 14.5,10 Z" fill="var(--fat)"/><path id="enz2" class="mv" d="M0,0 L14.5,-10 A18,18 0 1 0 14.5,10 Z" fill="var(--fat)"/>';
+      for(i=0;i<3;i++)s+='<circle id="o'+i+'" class="mv" r="6" fill="var(--o2)"/>';
+      for(i=0;i<3;i++)s+='<circle id="c'+i+'" class="mv" r="6" fill="var(--co2)"/>';
+      for(i=0;i<4;i++)s+='<polygon id="s'+i+'" class="mv" points="0,-13 3.8,-4 13,-4 5.6,2 8.3,12 0,6.3 -8.3,12 -5.6,2 -13,-4 -3.8,-4" fill="var(--atp)" stroke="var(--atp-ink)" stroke-width="1"/>';
+      s+='<text class="lab sub" id="t-enz" x="110" y="128" text-anchor="middle">Enzyme</text>';
+      s+='<text class="lab" id="t-glu" x="110" y="150" text-anchor="middle">Glucose</text>';
+      s+='<text class="lab" id="t-ami" x="110" y="300" text-anchor="middle">Amino acids</text>';
+      s+='<text class="lab sub" id="t-o2" x="712" y="18" text-anchor="end">Oxygen in</text>';
+      s+='<text class="lab" id="t-atp" x="600" y="238" text-anchor="middle">ATP</text>';
+      s+='<text class="lab sub" id="t-co2" x="632" y="334" text-anchor="end">Carbon dioxide out</text>';
+      s+='<text class="lab sub" id="t-new" x="372" y="298" text-anchor="middle">New protein</text>';
+      s+='<text class="lab sub" id="t-carb" x="12" y="24">Starch and glucose are carbohydrates</text>';
+    }
+    return s+'</svg>';
+  }
+  /* Level 3: where everything is after n finished steps */
+  function applyScene(root,n){
+    function mv(id,x,y,op,sc){var e=root.querySelector('#'+id);if(!e)return;e.style.transform='translate('+x+'px,'+y+'px)'+(sc===undefined?'':' scale('+sc+')');e.style.opacity=op===undefined?1:op;}
+    function lab(id,on){var e=root.querySelector('#'+id);if(e)e.classList.toggle('on',!!on);}
+    var cut=n>=1,i;
+    var gIn=[[352,72],[520,74],[556,256]];
+    for(i=0;i<5;i++){
+      var gx=38+i*36+(cut?(i-2)*7:0),gy=90;
+      if(n>=4&&i<3){gx=gIn[i][0];gy=gIn[i][1];}
+      var gop=1;
+      if(n>=5&&i===1){gx=600;gy=162;}
+      if(n>=7&&i===1)gop=0;
+      mv('g'+i,gx,gy,gop);
+    }
+    root.querySelector('#l-starch').style.opacity=cut?0:1;
+    mv('enz1',92,118,cut?1:0);lab('t-enz',cut&&n<4);lab('t-glu',n>=2&&n<4);
+    var pcut=n>=3;
+    for(i=0;i<5;i++){
+      var ax=38+i*36+(pcut?(i-2)*7:0),ay=246;
+      if(n>=9&&i<3){ax=340+i*32;ay=268;}
+      mv('a'+i,ax,ay,1);
+    }
+    root.querySelector('#l-protein').style.opacity=pcut?0:1;
+    root.querySelector('#l-new').style.opacity=n>=9?1:0;
+    mv('enz2',92,274,pcut&&n<9?1:0);lab('t-ami',pcut&&n<9);lab('t-new',n>=9);
+    var oIn=[[572,150],[622,176],[600,142]],oOut=[[716,24],[700,8],[684,20]];
+    for(i=0;i<3;i++){var o=n>=6?oIn[i]:oOut[i];mv('o'+i,o[0],o[1],n>=6&&n<8?1:(n>=8?0:0));}
+    lab('t-o2',n===6);
+    var sp=[[556,108],[648,112],[668,214],[546,216]];
+    for(i=0;i<4;i++)mv('s'+i,sp[i][0],sp[i][1],n>=7?1:0,n>=7?1:.2);
+    lab('t-atp',n>=7);
+    var cOut=[[712,300],[688,326],[652,332]];
+    for(i=0;i<3;i++){var c=n>=8?cOut[i]:[600,162];mv('c'+i,c[0],c[1],n>=8?1:0);}
+    lab('t-co2',n>=8);lab('t-carb',n>=10);
+  }
+  function makeScene(lv,qi){
+    var box=h('div',{'class':'scene'+(lv===2?' wide':''),html:sceneSVG(lv)});
+    if(lv===1){
+      for(var k=levelStart(1);k<qi;k++)if(Q[k].type==='click'){var l=box.querySelector('[data-lab="'+Q[k].part+'"]');if(l)l.classList.add('on');}
+    }else{
+      /* place without animating first */
+      [].forEach.call(box.querySelectorAll('.mv'),function(e){e.style.transition='none';});
+      applyScene(box,qi-levelStart(2));
+      setTimeout(function(){[].forEach.call(box.querySelectorAll('.mv'),function(e){e.style.transition='';});},50);
+    }
+    return box;
+  }
+
+  /* ---------- screens ---------- */
+  function intro(){
+    startBest=readBest()||0;
+    show([
+      head('Your mission','Explore the cell and learn 15 science words.',HERO),
+      h('p',{text:'There are three levels. First you match molecule words to their meanings, then you label the parts of a cell, then you feed the cell to make energy.'}),
+      h('p',{text:'There are '+MAX+' questions. Each one is worth 1 point, and you earn it by getting the answer right on your first try.'}),
+      h('button',{'class':'go',type:'button',text:'Start',on:{click:function(){
+        st.i=0;st.score=0;st.order=shuffle(TERMS.map(function(t,i){return i;}));st.cards=shuffle(TERMS.map(function(t,i){return i;}));
+        introSeen={};peeked=false;saveProgress(0);play();
+      }}})
+    ]);
+  }
+  function levelIntro(lv){
+    show([
+      head('Level '+(lv+1)+' of '+LEVELS.length,esc(LEVELS[lv].name)),
+      h('p',{text:LEVELS[lv].intro}),
+      h('button',{'class':'go',type:'button',text:'Start level '+(lv+1),on:{click:function(){introSeen[lv]=true;play();}}})
+    ]);
+    card.querySelector('button.go').focus();
+  }
+
+  function play(){
+    var c=Q[st.i],lv=c.lv,misses=0,fb=h('div',{'class':'fb','aria-live':'polite'});
+    if(st.i===levelStart(lv)&&!introSeen[lv]){levelIntro(lv);return;}
+    var nInLevel=st.i-levelStart(lv)+1,total=Q.filter(function(q){return q.lv===lv;}).length;
+    var where='Level '+(lv+1)+' \u00b7 '+LEVELS[lv].name+' \u00b7 Question '+nInLevel+' of '+total;
+    function miss(el,msg){misses++;if(el)shake(el);fb.className='fb no';fb.innerHTML='<strong>Not quite.</strong>';fb.appendChild(document.createTextNode(msg||c.hint||''));}
+    function win(why,after){
+      var pts=misses?0:1;st.score+=pts;saveBest(st.score);saveProgress(st.i+1);
+      fb.className='fb ok';
+      fb.innerHTML='<strong>'+starHTML(pts)+(pts?'Correct. +1 point':'Got it. No point this time, because it took more than one try.')+'</strong>';
+      fb.appendChild(document.createTextNode(why));
+      if(after)after();
+      var last=st.i===MAX-1;
+      var next=h('button',{'class':'go',type:'button',text:last?'See your results':'Next',on:{click:function(){st.i++;st.i<MAX?play():end();}}});
+      card.appendChild(next);status();next.focus();
+    }
+
+    /* ----- Level 1: find the card ----- */
+    if(c.type==='find'){
+      var slot=st.i-levelStart(0),term=TERMS[st.order[slot]],found={},k;
+      for(k=0;k<slot;k++)found[st.order[k]]=true;
+      var busy=false,btns=[];
+      function face(b,ti,up){
+        b.className='flip'+(up?'':' down');
+        b.innerHTML=up?'<svg viewBox="0 0 120 60" aria-hidden="true">'+TERMS[ti].art+'</svg><span>'+esc(TERMS[ti].m)+'</span>':'?';
+        b.setAttribute('aria-label',up?TERMS[ti].m:'Face-down card '+(btns.indexOf(b)+1));
+      }
+      var deck=h('div',{'class':'deck'});
+      st.cards.forEach(function(ti,pos){
+        var b=h('button',{type:'button','data-pos':pos});btns.push(b);deck.appendChild(b);
+        b.addEventListener('click',function(){
+          if(busy||b.disabled||!peeked)return;
+          if(ti===st.order[slot]){face(b,ti,true);b.classList.add('right');btns.forEach(function(x){x.disabled=true;});win(term.why);}
+          else{
+            busy=true;face(b,ti,true);b.classList.add('miss');
+            miss(b,'That card does not mean '+term.t.toLowerCase()+'. Remember what it says, then try another.');
+            setTimeout(function(){face(b,ti,false);busy=false;},1800);
+          }
+        });
+      });
+      function draw(allUp){btns.forEach(function(b,pos){var ti=st.cards[pos];var up=allUp||found[ti];face(b,ti,up);if(found[ti]){b.classList.add('right');b.disabled=true;}else b.disabled=allUp;});}
+      if(!peeked){
+        draw(true);
+        show([head(where,'Study the cards.'),
+          h('p',{text:'Read what each card says and remember where it is. When you are ready, the cards turn face down.'}),
+          deck,
+          h('button',{'class':'go',type:'button',text:'I\u2019m ready. Turn them over',on:{click:function(){peeked=true;play();}}})]);
+        return;
+      }
+      draw(false);
+      show([head(where,'Find the card that means <em>'+esc(term.t)+'</em>.'),deck,fb]);
+      return;
+    }
+
+    /* ----- Levels 2 and 3: the cell diagram ----- */
+    var scene=makeScene(lv,st.i),step=st.i-levelStart(2)+1;
+    function after(){
+      if(lv===1&&c.type==='click'){var l=scene.querySelector('[data-lab="'+c.part+'"]');if(l)l.classList.add('on');}
+      if(lv===2)applyScene(scene,step);
+    }
+    if(c.type==='click'){
+      scene.classList.add('pick');
+      var done=false;
+      var choose=function(e){
+        if(done)return;
+        var t=e.target.closest('[data-part]');if(!t)return;
+        if(e.type==='keydown'){if(e.key!=='Enter'&&e.key!==' ')return;e.preventDefault();}
+        if(t.getAttribute('data-part')===c.part){
+          done=true;scene.classList.remove('pick');
+          [].forEach.call(scene.querySelectorAll('.part[data-part="'+c.part+'"]'),function(p){if(c.part!=='membrane')p.classList.add('hit');});
+          win(c.why,after);
+        }else miss(scene,c.hint);
+      };
+      scene.addEventListener('click',choose);scene.addEventListener('keydown',choose);
+      show([head(where,esc(c.q)),h('p',{text:'Click the part itself or its letter.'}),scene,fb]);
+      return;
+    }
+    var order=shuffle(c.opts.map(function(t,i){return i;}));
+    var obtn=order.map(function(i){
+      return h('button',{type:'button',text:c.opts[i],on:{click:function(){
+        if(i===0){this.classList.add('right');obtn.forEach(function(b){b.disabled=true;});win(c.why,after);}
+        else{this.classList.add('wrong');this.disabled=true;miss(this);}
+      }}});
+    });
+    show([head(where,esc(c.q)),scene,h('div',{'class':'opts'},obtn),fb]);
+  }
+
+  function end(){
+    var tier=st.score>=MAX-2?0:(st.score>=MAX*0.65?1:2),rank=CFG.ranks[tier];
+    card.style.setProperty('--medal',['var(--atp)','var(--gas)','var(--food)'][tier]);
+    var saved=saveBest(st.score);
+    var savedMsg=!saved?'Your points could not be saved in this browser window.'
+      :(st.score>startBest?'New best score. '+st.score+' points now count toward your total on the home page.'
+      :'Your best score on this page is still '+readBest()+'. Beat it to raise your total.');
+    show([
+      head('Mission complete','You explored the whole cell.',MEDAL),
+      h('p',{'class':'big',text:st.score+' / '+MAX+' points'}),
+      h('p',{text:'Rank: '+rank+'.'}),
+      h('p',{text:savedMsg}),
+      h('p',{text:'The whole story in one line: enzymes cut starch into glucose and protein into amino acids; glucose crosses the cell membrane, and the mitochondrion uses oxygen to turn its energy into ATP, giving off carbon dioxide; the cell uses amino acids to build new proteins.'}),
+      h('button',{'class':'go',type:'button',text:'Play again',on:{click:restart}})
+    ]);
+  }
+
+  document.getElementById('restart').addEventListener('click',restart);
+  var saved=loadProgress();
+  if(saved){
+    st.i=saved.i;st.score=saved.score;st.order=saved.order;st.cards=saved.cards;startBest=saved.startBest||0;
+    if(st.i<MAX){introSeen[Q[st.i].lv]=st.i!==levelStart(Q[st.i].lv);play();}else end();
+  }else intro();
+})();
+</script>
+</body>
+</html>

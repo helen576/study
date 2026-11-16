@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Good good study, day day up!</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Console layout: topics in a dark sidebar with the points total; search, filters and picture cards in the main area. */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  color-scheme: light;
+  --side: #172437; --side-ink: #dce3ee; --side-muted: #93a1b7; --side-line: #2a3a52;
+  --page: #f1f3f6; --surface: #ffffff; --ink: #1a2333; --muted: #586377; --rule: #dce1e8;
+  --accent: #0e7c86; --ok: #1f7a4c; --ok-tint: #e3f2ea; --go: #9a5b00; --go-tint: #fbf0dc;
+  --font: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  /* colours used by the card drawings */
+  --panel: #ffffff; --line: #c9d6d6; --cell: #e3f0ee; --cell-edge: #8fb8b3; --mito: #f8dccf; --mito-ink: #b5553a; --blood: #f3d3d3;
+  --glucose: #3f62d6; --fat: #c2488a; --amino: #5f9420; --carrier: #12909a; --proton: #8556d8; --gas: #7c8f96;
+  --atp: #e39a0c; --atp-ink: #8a5a00; --rich: #d23b3b; --poor: #3f5fc9; --o2: #e0552f; --co2: #5d7f9c;
+  --food: #a9743a; --waste: #6b4a2a; --water: #2f9fd0; --gland: #f3e2a8; --bread: #e3b877; --egg: #fffdf5;
+}
+body { font-family: var(--font); background: var(--page); color: var(--ink); font-size: 15px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.app { display: grid; grid-template-columns: 272px minmax(0, 1fr); min-height: 100vh; }
+
+/* ---------- sidebar ---------- */
+aside { background: var(--side); color: var(--side-ink); position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 1.6rem 1.1rem 2rem; }
+.from { font-size: .8rem; color: var(--side-muted); }
+aside h1 { font-size: 1.3rem; line-height: 1.2; font-weight: 600; margin: .35rem 0 1.4rem; color: #fff; text-wrap: balance; }
+.total { background: rgba(255,255,255,.05); border: 1px solid var(--side-line); border-radius: 10px; padding: .85rem .9rem; margin-bottom: 1.5rem; }
+.total .num { font-size: 1.9rem; font-weight: 600; color: #ffc24a; line-height: 1.1; }
+.total .num span { font-size: .95rem; font-weight: 400; color: var(--side-muted); }
+.total p { font-size: .82rem; color: var(--side-muted); margin: .15rem 0 .6rem; }
+.meter { height: 6px; border-radius: 3px; background: var(--side-line); overflow: hidden; }
+.meter i { display: block; height: 100%; background: #ffc24a; }
+.sections { list-style: none; display: grid; gap: 2px; }
+.sections a { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; align-items: center; gap: .65rem; text-decoration: none; color: var(--side-ink);
+  padding: .5rem .6rem; border-radius: 8px; font-size: .9rem; }
+.sections a:hover { background: rgba(255,255,255,.06); }
+.sections a:focus-visible { outline: 2px solid #8fd3d8; outline-offset: 1px; }
+.sections .dot { width: 10px; height: 10px; border-radius: 3px; background: var(--g); box-shadow: 0 0 0 1.5px var(--g-300); }
+.sections .cnt { font-size: .8rem; color: var(--side-muted); }
+
+/* ---------- main ---------- */
+main { padding: 1.6rem 2rem 4rem; min-width: 0; }
+.intro { color: var(--muted); max-width: 70ch; font-size: .95rem; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin: 1.1rem 0 1.5rem; position: sticky; top: 0; z-index: 4;
+  background: var(--page); padding: .75rem 0; border-bottom: 1px solid var(--rule); }
+.search { position: relative; flex: 1 1 260px; max-width: 380px; }
+.search svg { position: absolute; left: .7rem; top: 50%; transform: translateY(-50%); color: var(--muted); }
+.search input { width: 100%; font: inherit; padding: .55rem .8rem .55rem 2.2rem; border: 1px solid #c4ccd8; border-radius: 8px; background: var(--surface); color: var(--ink); }
+.search input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+.filters { display: inline-flex; background: var(--surface); border: 1px solid #c4ccd8; border-radius: 8px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+.filters button { font: inherit; font-size: .88rem; border: 0; background: none; color: var(--muted); padding: .35rem .7rem; border-radius: 6px; cursor: pointer; }
+.filters button span { margin-left: .3rem; color: #8a94a6; }
+.filters button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.filters button[aria-pressed="true"] span { color: #c8d0dc; }
+.filters button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+section.group { margin-bottom: 2.2rem; scroll-margin-top: 84px; }
+.ghead { display: flex; align-items: baseline; gap: .75rem; margin-bottom: .8rem; padding-left: .7rem; border-left: 4px solid var(--g); }
+.ghead h2 { font-size: 1.05rem; font-weight: 600; }
+.ghead p { font-size: .85rem; color: var(--muted); margin-left: auto; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+.mod { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; text-decoration: none; color: inherit; }
+.mod:hover { border-color: var(--g); }
+.mod:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pic { aspect-ratio: 16 / 9; background: var(--g-50); padding: 10px 14px; }
+.pic svg { display: block; width: 100%; height: 100%; }
+.pic .organ { fill: var(--mito); stroke: var(--mito-ink); stroke-width: 2.5; }
+.mod .b { padding: .7rem .8rem .8rem; display: flex; flex-direction: column; gap: .4rem; flex: 1; }
+.mod h3 { font-size: .98rem; font-weight: 600; line-height: 1.3; }
+.mod .about { font-size: .84rem; color: var(--muted); }
+.meta { margin-top: auto; padding-top: .3rem; display: flex; align-items: center; justify-content: space-between; gap: .5rem; font-size: .8rem; color: var(--muted); }
+.kind { font-weight: 600; color: var(--g-700); }
+.chip { font-size: .76rem; font-weight: 500; padding: .12rem .5rem; border-radius: 999px; background: #eceff3; color: var(--muted); white-space: nowrap; }
+.chip.go { background: var(--go-tint); color: var(--go); }
+.chip.ok { background: var(--ok-tint); color: var(--ok); }
+.thin { height: 3px; background: #e6e9ee; }
+.thin i { display: block; height: 100%; background: var(--g); }
+.mod.done .thin i { background: var(--ok); }
+
+.empty { background: var(--surface); border: 1px dashed #b9c2cf; border-radius: 10px; padding: 1.5rem; color: var(--muted); }
+.empty button { font: inherit; color: var(--accent); background: none; border: 0; text-decoration: underline; cursor: pointer; }
+
+@media (max-width: 900px) {
+  .app { grid-template-columns: 1fr; }
+  aside { position: static; height: auto; padding: 1.25rem 16px 1rem; }
+  aside h1 { margin-bottom: 1rem; }
+  .total { margin-bottom: 1rem; }
+  .sections { display: flex; overflow-x: auto; gap: 6px; padding-bottom: .25rem; }
+  .sections a { grid-template-columns: 10px auto auto; white-space: nowrap; background: rgba(255,255,255,.05); }
+  main { padding: 1rem 16px 3rem; }
+  .toolbar { position: static; }
+  .filters { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; }
+  .filters button { white-space: nowrap; }
+}
+@media (max-width: 520px) {
+  .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .mod h3 { font-size: .9rem; }
+  .mod .about { display: none; }
+  .meta { flex-direction: column; align-items: flex-start; gap: .3rem; }
+  .search { max-width: none; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+  <h1>Good good study, day day up!</h1>
+  <div class="total" aria-live="polite">
+    <div class="num" id="tot-num">0 <span>of 0</span></div>
+    <p id="tot-note">points earned</p>
+    <div class="meter" aria-hidden="true"><i id="tot-bar" style="width:0"></i></div>
+  </div>
+  <nav aria-label="Jump to topic"><ul class="sections" id="sections"></ul></nav>
+</aside>
+<main>
+  <p class="intro">Watch an animation to the end to earn 5 points. Then play its game: each question you get right on the first try earns 1 point. Your points are saved in this browser.</p>
+  <div class="toolbar">
+    <label class="search"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <input id="q" type="search" placeholder="Search pages" aria-label="Search pages" autocomplete="off"></label>
+    <div class="filters" role="group" aria-label="Show pages" id="filters"></div>
+  </div>
+  <div id="groups"></div>
+</main>
+</div>
+
+<script>
+/* ---------- The pages ----------
+   To add a page: upload its .html file next to this one, then add one line to the right topic below.
+     { title, file, kind: "Animation" or "Game", art, about, id, max }
+   id is the PAGE_ID the page saves its points under, and max is its maximum score
+   (5 for an animation; the number of questions for a game).
+   art is the name of one of the drawings in ART further down.
+   To add a topic: copy a whole { name, color, pages: [...] } block. */
+const GROUPS = [
+ {
+  "name": "Metabolism",
+  "color": "#b8720a",
+  "pages": [
+   {
+    "title": "How metabolism works",
+    "file": "metabolism.html",
+    "kind": "Animation",
+    "id": "metabolism",
+    "max": 5,
+    "art": "battery",
+    "about": "Follow one meal from food to ATP in five animated steps."
+   },
+   {
+    "title": "Power the Cell",
+    "file": "metabolism-game.html",
+    "kind": "Game",
+    "art": "meal",
+    "id": "game",
+    "max": 13,
+    "about": "Run a cell and earn ATP by making the right call at each step."
+   }
+  ]
+ },
+ {
+  "name": "Respiratory system",
+  "color": "#2b6fc9",
+  "pages": [
+   {
+    "title": "How the respiratory system works",
+    "file": "respiratory.html",
+    "kind": "Animation",
+    "id": "respiratory",
+    "max": 5,
+    "art": "lungs",
+    "about": "Follow one breath from your nose to your cells and back out."
+   },
+   {
+    "title": "Breath Mission",
+    "file": "respiratory-game.html",
+    "kind": "Game",
+    "art": "alveoli",
+    "id": "respiratory-game",
+    "max": 11,
+    "about": "Guide a breath through the lungs and get its oxygen to the body."
+   }
+  ]
+ },
+ {
+  "name": "Digestive system",
+  "color": "#a8562f",
+  "pages": [
+   {
+    "title": "How the digestive system works",
+    "file": "digestive.html",
+    "kind": "Animation",
+    "id": "digestive",
+    "max": 5,
+    "art": "tract",
+    "about": "Follow one bite of food from the mouth to the large intestine."
+   },
+   {
+    "title": "Food Journey",
+    "file": "digestive-game.html",
+    "kind": "Game",
+    "art": "stomach",
+    "id": "digestive-game",
+    "max": 11,
+    "about": "Guide a meal through each organ and get its nutrients into the blood."
+   }
+  ]
+ },
+ {
+  "name": "Circulatory system",
+  "color": "#c2334a",
+  "pages": [
+   {
+    "title": "How the circulatory system works",
+    "file": "circulatory.html",
+    "kind": "Animation",
+    "id": "circulatory",
+    "max": 5,
+    "art": "loop",
+    "about": "Follow your blood on one full trip around the heart, lungs and body."
+   },
+   {
+    "title": "Heartbeat Run",
+    "file": "circulatory-game.html",
+    "kind": "Game",
+    "art": "heart",
+    "id": "circulatory-game",
+    "max": 11,
+    "about": "Take the blood on a full lap and answer at every stop."
+   }
+  ]
+ },
+ {
+  "name": "Cellular respiration",
+  "color": "#0e7c86",
+  "pages": [
+   {
+    "title": "How cellular respiration works",
+    "file": "cellular-respiration.html",
+    "kind": "Animation",
+    "id": "cellular-respiration",
+    "max": 5,
+    "art": "mito",
+    "about": "Follow one glucose molecule as a cell turns it into energy."
+   },
+   {
+    "title": "Energy Factory",
+    "file": "cellular-respiration-game.html",
+    "kind": "Game",
+    "art": "chain",
+    "id": "cellular-respiration-game",
+    "max": 12,
+    "about": "Run a cell’s energy factory through all three stages."
+   }
+  ]
+ },
+ {
+  "name": "Cells and molecules",
+  "color": "#6a4fc9",
+  "pages": [
+   {
+    "title": "Cell Explorer",
+    "file": "cell-explorer-game.html",
+    "kind": "Game",
+    "art": "cellart",
+    "id": "cell-explorer",
+    "max": 25,
+    "about": "Three levels: match the molecule words, label the cell, then feed the cell to make energy."
+   }
+  ]
+ }
+];
+
+/* Card drawings (the same ones the games use). */
+const ART = {
+"alveoli": "<path d=\"M30,96 C60,128 100,128 100,112\" fill=\"none\" stroke=\"var(--poor)\" stroke-width=\"11\" stroke-linecap=\"round\"/><path d=\"M100,112 C100,128 150,126 174,92\" fill=\"none\" stroke=\"var(--rich)\" stroke-width=\"11\" stroke-linecap=\"round\"/><circle cx=\"74\" cy=\"44\" r=\"24\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"3\"/><circle cx=\"120\" cy=\"40\" r=\"24\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"3\"/><circle cx=\"98\" cy=\"76\" r=\"24\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"3\"/><circle cx=\"140\" cy=\"76\" r=\"19\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"3\"/><circle cx=\"56\" cy=\"78\" r=\"17\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"3\"/><circle cx=\"92\" cy=\"70\" r=\"4.5\" fill=\"var(--o2)\"/><circle cx=\"106\" cy=\"84\" r=\"4.5\" fill=\"var(--o2)\"/><circle cx=\"124\" cy=\"44\" r=\"4.5\" fill=\"var(--co2)\"/><circle cx=\"72\" cy=\"40\" r=\"4.5\" fill=\"var(--co2)\"/>",
+"battery": "<rect x=\"36\" y=\"34\" width=\"118\" height=\"66\" rx=\"12\" fill=\"var(--panel)\" stroke=\"var(--ink)\" stroke-width=\"4\"/><rect x=\"154\" y=\"52\" width=\"12\" height=\"30\" rx=\"4\" fill=\"var(--ink)\"/><rect x=\"48\" y=\"46\" width=\"26\" height=\"42\" rx=\"5\" fill=\"var(--atp)\"/><rect x=\"82\" y=\"46\" width=\"26\" height=\"42\" rx=\"5\" fill=\"var(--atp)\"/><rect x=\"116\" y=\"46\" width=\"26\" height=\"42\" rx=\"5\" fill=\"var(--atp)\"/><polygon points=\"100,40 82,70 98,70 90,96 118,62 102,62 110,40\" fill=\"var(--ink)\"/>",
+"cellart": "<rect x=\"10\" y=\"10\" width=\"180\" height=\"110\" rx=\"46\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"4\"/><circle cx=\"70\" cy=\"62\" r=\"26\" fill=\"var(--proton)\" opacity=\".55\"/><circle cx=\"70\" cy=\"62\" r=\"10\" fill=\"var(--proton)\"/><g transform=\"translate(108 50) scale(.42)\"><rect x=\"22\" y=\"26\" width=\"156\" height=\"80\" rx=\"40\" fill=\"var(--mito)\" stroke=\"var(--mito-ink)\" stroke-width=\"3\"/><path d=\"M42,70 q10,-34 20,0 t20,0 t20,0 t20,0 t20,0 t20,0\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/></g><g transform=\"translate(96 76) scale(.3) rotate(20 100 65)\"><rect x=\"22\" y=\"26\" width=\"156\" height=\"80\" rx=\"40\" fill=\"var(--mito)\" stroke=\"var(--mito-ink)\" stroke-width=\"3\"/><path d=\"M42,70 q10,-34 20,0 t20,0 t20,0 t20,0 t20,0 t20,0\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/></g><circle cx=\"40\" cy=\"96\" r=\"4\" fill=\"var(--cell-edge)\"/><circle cx=\"150\" cy=\"34\" r=\"4\" fill=\"var(--cell-edge)\"/><circle cx=\"124\" cy=\"34\" r=\"3\" fill=\"var(--cell-edge)\"/>",
+"chain": "<rect x=\"6\" y=\"74\" width=\"188\" height=\"12\" rx=\"6\" fill=\"var(--mito-ink)\" opacity=\".5\"/><rect x=\"20\" y=\"56\" width=\"26\" height=\"48\" rx=\"9\" fill=\"var(--mito-ink)\"/><rect x=\"62\" y=\"56\" width=\"26\" height=\"48\" rx=\"9\" fill=\"var(--mito-ink)\"/><rect x=\"104\" y=\"56\" width=\"26\" height=\"48\" rx=\"9\" fill=\"var(--mito-ink)\"/><rect x=\"154\" y=\"62\" width=\"14\" height=\"44\" rx=\"5\" fill=\"var(--atp)\"/><circle cx=\"161\" cy=\"56\" r=\"15\" fill=\"var(--atp)\"/><circle cx=\"40\" cy=\"46\" r=\"3.5\" fill=\"var(--carrier)\"/><circle cx=\"60\" cy=\"44\" r=\"3.5\" fill=\"var(--carrier)\"/><circle cx=\"82\" cy=\"46\" r=\"3.5\" fill=\"var(--carrier)\"/><circle cx=\"104\" cy=\"44\" r=\"3.5\" fill=\"var(--carrier)\"/><polygon points=\"150.0,12.0 152.6,18.4 159.5,18.9 154.3,23.4 155.9,30.1 150.0,26.5 144.1,30.1 145.7,23.4 140.5,18.9 147.4,18.4\" fill=\"var(--atp)\" stroke=\"var(--atp-ink)\" stroke-width=\"1\"/><polygon points=\"176.0,4.0 179.2,11.6 187.4,12.3 181.1,17.7 183.1,25.7 176.0,21.4 168.9,25.7 170.9,17.7 164.6,12.3 172.8,11.6\" fill=\"var(--atp)\" stroke=\"var(--atp-ink)\" stroke-width=\"1\"/><polygon points=\"188.0,32.0 190.1,37.1 195.6,37.5 191.4,41.1 192.7,46.5 188.0,43.6 183.3,46.5 184.6,41.1 180.4,37.5 185.9,37.1\" fill=\"var(--atp)\" stroke=\"var(--atp-ink)\" stroke-width=\"1\"/>",
+"heart": "<rect x=\"76\" y=\"6\" width=\"14\" height=\"30\" rx=\"5\" fill=\"var(--poor)\"/><rect x=\"110\" y=\"6\" width=\"14\" height=\"30\" rx=\"5\" fill=\"var(--rich)\"/><path d=\"M100,118 C36,78 26,44 48,26 C68,11 90,22 100,42 C110,22 132,11 152,26 C174,44 164,78 100,118 Z\" fill=\"var(--rich)\"/><path d=\"M100,42 L100,116 M52,66 L148,66\" stroke=\"#000\" stroke-opacity=\".22\" stroke-width=\"3\" stroke-dasharray=\"6 5\"/>",
+"loop": "<path d=\"M100,66 C56,66 52,14 100,14\" fill=\"none\" stroke=\"var(--poor)\" stroke-width=\"8\"/><path d=\"M100,14 C148,14 144,66 100,66\" fill=\"none\" stroke=\"var(--rich)\" stroke-width=\"8\"/><path d=\"M100,66 C150,66 152,120 100,120\" fill=\"none\" stroke=\"var(--rich)\" stroke-width=\"8\"/><path d=\"M100,120 C48,120 50,66 100,66\" fill=\"none\" stroke=\"var(--poor)\" stroke-width=\"8\"/><rect x=\"78\" y=\"4\" width=\"44\" height=\"20\" rx=\"10\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"2.5\"/><rect x=\"74\" y=\"110\" width=\"52\" height=\"18\" rx=\"9\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"2.5\"/><g transform=\"translate(74 46) scale(.26)\"><path d=\"M100,118 C36,78 26,44 48,26 C68,11 90,22 100,42 C110,22 132,11 152,26 C174,44 164,78 100,118 Z\" fill=\"var(--rich)\"/></g>",
+"lungs": "<rect x=\"93\" y=\"4\" width=\"14\" height=\"44\" rx=\"6\" fill=\"var(--panel)\" stroke=\"var(--mito-ink)\" stroke-width=\"2.5\"/><path class=\"organ\" d=\"M92,32 C68,30 40,62 38,100 C38,116 62,118 92,104 Z\"/><path class=\"organ\" d=\"M108,32 C132,30 160,62 162,100 C162,116 138,118 108,104 Z\"/><path d=\"M92,50 L72,72 M72,72 L60,92 M72,72 L80,94 M108,50 L128,72 M128,72 L140,92 M128,72 L120,94\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\" fill=\"none\"/><path d=\"M22,123 Q100,100 178,123\" stroke=\"var(--mito-ink)\" stroke-width=\"5\" stroke-linecap=\"round\" fill=\"none\"/>",
+"meal": "<ellipse cx=\"100\" cy=\"78\" rx=\"88\" ry=\"40\" fill=\"var(--panel)\" stroke=\"var(--line)\" stroke-width=\"3\"/><ellipse cx=\"100\" cy=\"78\" rx=\"66\" ry=\"28\" fill=\"none\" stroke=\"var(--line)\" stroke-width=\"2\"/><rect x=\"42\" y=\"50\" width=\"50\" height=\"42\" rx=\"10\" fill=\"var(--bread)\" stroke=\"var(--food)\" stroke-width=\"4\"/><rect x=\"56\" y=\"62\" width=\"22\" height=\"13\" rx=\"3\" fill=\"var(--gland)\" stroke=\"var(--atp-ink)\" stroke-width=\"1.5\" transform=\"rotate(-12 67 68)\"/><path d=\"M104,72 C100,52 126,44 140,54 C158,52 164,74 152,84 C150,98 124,100 114,90 C104,90 100,80 104,72 Z\" fill=\"var(--egg)\" stroke=\"var(--line)\" stroke-width=\"2\"/><circle cx=\"130\" cy=\"72\" r=\"10\" fill=\"var(--atp)\"/><ellipse cx=\"88\" cy=\"103\" rx=\"8\" ry=\"5\" fill=\"var(--waste)\" transform=\"rotate(-20 88 103)\"/><ellipse cx=\"104\" cy=\"107\" rx=\"8\" ry=\"5\" fill=\"var(--waste)\" transform=\"rotate(15 104 107)\"/><ellipse cx=\"72\" cy=\"100\" rx=\"8\" ry=\"5\" fill=\"var(--waste)\" transform=\"rotate(25 72 100)\"/>",
+"mito": "<rect x=\"22\" y=\"26\" width=\"156\" height=\"80\" rx=\"40\" fill=\"var(--mito)\" stroke=\"var(--mito-ink)\" stroke-width=\"3\"/><path d=\"M42,70 q10,-34 20,0 t20,0 t20,0 t20,0 t20,0 t20,0\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><polygon points=\"22.0,8.0 24.6,14.4 31.5,14.9 26.3,19.4 27.9,26.1 22.0,22.5 16.1,26.1 17.7,19.4 12.5,14.9 19.4,14.4\" fill=\"var(--atp)\" stroke=\"var(--atp-ink)\" stroke-width=\"1\"/><polygon points=\"182.0,8.0 185.2,15.6 193.4,16.3 187.1,21.7 189.1,29.7 182.0,25.4 174.9,29.7 176.9,21.7 170.6,16.3 178.8,15.6\" fill=\"var(--atp)\" stroke=\"var(--atp-ink)\" stroke-width=\"1\"/><polygon points=\"170.0,107.0 172.4,112.7 178.6,113.2 173.9,117.3 175.3,123.3 170.0,120.0 164.7,123.3 166.1,117.3 161.4,113.2 167.6,112.7\" fill=\"var(--atp)\" stroke=\"var(--atp-ink)\" stroke-width=\"1\"/>",
+"stomach": "<path class=\"organ\" d=\"M92,10 C92,34 60,40 54,72 C48,108 96,122 128,102 C154,86 152,58 136,50 C124,44 112,48 110,30 L110,10 Z\"/><circle cx=\"84\" cy=\"82\" r=\"8\" fill=\"var(--food)\"/><circle cx=\"108\" cy=\"92\" r=\"6\" fill=\"var(--food)\"/><circle cx=\"100\" cy=\"68\" r=\"5\" fill=\"var(--food)\"/><circle cx=\"124\" cy=\"74\" r=\"4\" fill=\"var(--gland)\"/><circle cx=\"76\" cy=\"62\" r=\"4\" fill=\"var(--gland)\"/><circle cx=\"92\" cy=\"100\" r=\"3.5\" fill=\"var(--gland)\"/><circle cx=\"118\" cy=\"60\" r=\"3\" fill=\"var(--gland)\"/><path d=\"M150,28 q12,10 0,22 M164,22 q18,16 0,34\" fill=\"none\" stroke=\"var(--muted)\" stroke-width=\"2.5\" stroke-linecap=\"round\"/>",
+"tract": "<path d=\"M42,122 L42,48 a26,26 0 0 1 26,-26 L132,22 a26,26 0 0 1 26,26 L158,122\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"28\" stroke-linecap=\"round\"/><path d=\"M42,122 L42,48 a26,26 0 0 1 26,-26 L132,22 a26,26 0 0 1 26,26 L158,122\" fill=\"none\" stroke=\"var(--mito)\" stroke-width=\"22\" stroke-linecap=\"round\"/><path d=\"M66,56 q11,-16 22,0 t22,0 t22,0 M66,80 q11,-16 22,0 t22,0 t22,0 M66,104 q11,-16 22,0 t22,0 t22,0\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"9\" stroke-linecap=\"round\"/><path d=\"M66,56 q11,-16 22,0 t22,0 t22,0 M66,80 q11,-16 22,0 t22,0 t22,0 M66,104 q11,-16 22,0 t22,0 t22,0\" fill=\"none\" stroke=\"var(--mito)\" stroke-width=\"5\" stroke-linecap=\"round\"/>"
+};
+
+const FILTERS = [["all", "All"], ["anim", "Animations"], ["game", "Games"], ["todo", "Points still to earn"]];
+let filter = "all";
+
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function mix(a, b, t) {
+  const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), x = p(a), y = p(b);
+  return "#" + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, "0")).join("");
+}
+function vars(g) {
+  return `--g:${g};--g-50:${mix(g, "#ffffff", 0.9)};--g-300:${mix(g, "#ffffff", 0.5)};--g-700:${mix(g, "#000000", 0.22)}`;
+}
+function storageWorks() { try { localStorage.getItem("study-points:test"); return true; } catch (e) { return false; } }
+/* best score saved by a game page */
+function best(p) {
+  if (!p.id) return 0;
+  try {
+    const key = "study-points:" + p.id, r = JSON.parse(localStorage.getItem(key) || "null");
+    if (!r || typeof r.best !== "number") return 0;
+    /* s:1 marks the current scoring. Such a score carries over when a page's maximum changes, capped at the new maximum. */
+    if (r.s === 1) return Math.max(0, Math.min(p.max, r.best));
+    /* a save from before the marker existed, on the same scale: mark it so it carries over from now on */
+    if (r.max === p.max) { localStorage.setItem(key, JSON.stringify({ best: r.best, max: r.max, s: 1 })); return Math.max(0, Math.min(p.max, r.best)); }
+    return 0;
+  } catch (e) { return 0; }
+}
+function chip(p, b) {
+  if (b >= p.max) return `<span class="chip ok">${b} / ${p.max} · Full points</span>`;
+  if (b) return `<span class="chip go">${b} / ${p.max} points</span>`;
+  return `<span class="chip">${p.kind === "Game" ? "Not played" : "Not watched"} · ${p.max} points</span>`;
+}
+
+function render() {
+  const query = document.getElementById("q").value.trim().toLowerCase();
+  const counts = { all: 0, anim: 0, game: 0, todo: 0 };
+  let html = "", side = "", shownTotal = 0, total = 0, possible = 0;
+  GROUPS.forEach((g, gi) => {
+    const id = "topic-" + (gi + 1), v = vars(g.color);
+    let cards = "", shown = 0, gp = 0, gmax = 0;
+    for (const p of g.pages) {
+      const b = best(p), isGame = p.kind === "Game";
+      gp += b; gmax += p.max;
+      const kinds = { all: true, anim: !isGame, game: isGame, todo: b < p.max };
+      const match = !query || p.title.toLowerCase().includes(query) || g.name.toLowerCase().includes(query) || p.kind.toLowerCase().includes(query);
+      if (match) for (const k in counts) if (kinds[k]) counts[k]++;
+      if (!match || !kinds[filter]) continue;
+      shown++;
+      const pct = Math.round(b / p.max * 100);
+      const label = `${p.title}, ${p.kind.toLowerCase()}, ${b} of ${p.max} points`;
+      cards += `<a class="mod${b >= p.max ? " done" : ""}" href="${esc(p.file)}" aria-label="${esc(label)}">
+        <div class="pic"><svg viewBox="0 0 200 130" aria-hidden="true" focusable="false">${ART[p.art] || ""}</svg></div><div class="thin" aria-hidden="true"><i style="width:${pct}%"></i></div>
+        <div class="b"><h3>${esc(p.title)}</h3><p class="about">${esc(p.about)}</p><div class="meta"><span class="kind">${esc(p.kind)}</span>${chip(p, b)}</div></div></a>`;
+    }
+    total += gp; possible += gmax; shownTotal += shown;
+    side += `<li><a href="#${id}" style="${v}"><span class="dot" aria-hidden="true"></span><span>${esc(g.name)}</span><span class="cnt">${gp}/${gmax}</span></a></li>`;
+    if (shown) html += `<section class="group" id="${id}" style="${v}"><div class="ghead"><h2>${esc(g.name)}</h2><p>${gp} of ${gmax} points</p></div><div class="grid">${cards}</div></section>`;
+  });
+  if (!shownTotal) {
+    html = `<div class="empty">No pages${query ? ` match “${esc(query)}”` : " here yet"}. <button type="button" id="clear">Show all pages</button></div>`;
+  }
+  document.getElementById("groups").innerHTML = html;
+  document.getElementById("sections").innerHTML = side;
+  document.getElementById("filters").innerHTML = FILTERS.map(([k, label]) =>
+    `<button type="button" data-f="${k}" aria-pressed="${k === filter}">${label}<span>${counts[k]}</span></button>`).join("");
+  document.getElementById("tot-num").innerHTML = `${total} <span>of ${possible}</span>`;
+  document.getElementById("tot-note").textContent = storageWorks() ? "points earned" : "This browser window is not saving points. Try Chrome, Edge or Safari, outside private mode.";
+  document.getElementById("tot-bar").style.width = (possible ? total / possible * 100 : 0) + "%";
+  const clear = document.getElementById("clear");
+  if (clear) clear.onclick = () => { filter = "all"; document.getElementById("q").value = ""; render(); };
+}
+document.getElementById("filters").addEventListener("click", e => {
+  const b = e.target.closest("button[data-f]"); if (!b) return;
+  filter = b.dataset.f; render();
+  const again = document.querySelector(`#filters button[data-f="${filter}"]`); if (again) again.focus();
+});
+document.getElementById("q").addEventListener("input", render);
+/* Update whenever she comes back to this page, including from another tab. */
+["pageshow", "focus", "storage"].forEach(ev => window.addEventListener(ev, render));
+document.addEventListener("visibilitychange", render);
+render();
+</script>
+</body>
+</html>

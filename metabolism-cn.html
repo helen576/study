@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>新陈代谢是怎样进行的</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: one fixed map of the journey (food -> blood -> cell -> mitochondrion -> work),
+   read left to right; a five-step control strip and caption sit under it. */
+:root{
+  --bg:#f2f5f4; --panel:#ffffff; --ink:#16282b; --muted:#587074; --line:#c9d6d6;
+  --cell:#e3f0ee; --cell-edge:#8fb8b3; --mito:#f8dccf; --mito-ink:#b5553a; --blood:#f3d3d3;
+  --glucose:#3f62d6; --fat:#c2488a; --amino:#5f9420; --carrier:#12909a; --proton:#8556d8;
+  --gas:#7c8f96; --atp:#e39a0c; --atp-ink:#8a5a00;
+  --display:"Bricolage Grotesque","Microsoft YaHei","PingFang SC","Noto Sans SC",sans-serif;
+  --body:"IBM Plex Sans","Microsoft YaHei","PingFang SC","Noto Sans SC",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0f1a1c; --panel:#17272a; --ink:#e6f0ef; --muted:#93aaad; --line:#2f4649;
+    --cell:#16302f; --cell-edge:#3f7a74; --mito:#44271f; --mito-ink:#f09a7c; --blood:#4a2428;
+    --glucose:#8fa6ff; --fat:#f08cc0; --amino:#a6d65a; --carrier:#4fd0d8; --proton:#b99aff;
+    --gas:#9fb2b8; --atp:#ffc24a; --atp-ink:#ffd98a;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0f1a1c; --panel:#17272a; --ink:#e6f0ef; --muted:#93aaad; --line:#2f4649;
+  --cell:#16302f; --cell-edge:#3f7a74; --mito:#44271f; --mito-ink:#f09a7c; --blood:#4a2428;
+  --glucose:#8fa6ff; --fat:#f08cc0; --amino:#a6d65a; --carrier:#4fd0d8; --proton:#b99aff;
+  --gas:#9fb2b8; --atp:#ffc24a; --atp-ink:#ffd98a;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+main{max-width:1080px;margin:0 auto;padding:28px 20px 40px;display:flex;flex-direction:column;gap:18px}
+h1{font-family:var(--display);font-size:clamp(28px,4.2vw,40px);line-height:1.1;margin:0;text-wrap:balance;letter-spacing:-.01em}
+.lede{margin:6px 0 0;color:var(--muted);max-width:62ch}
+.stage-wrap{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow-x:auto}
+svg{display:block;width:100%;min-width:760px;height:auto}
+svg text{font-family:var(--body);fill:var(--ink)}
+.lbl{font-size:14px;font-weight:600}
+.sub{font-size:12px;fill:var(--muted)}
+.box{fill:var(--panel);stroke:var(--ink);stroke-width:1.5}
+.route{fill:none;stroke:var(--line);stroke-width:1.5;stroke-dasharray:3 5}
+[data-s]{transition:opacity .5s ease}
+.off{opacity:.2}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button{font:500 14px var(--body);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer}
+button:hover{border-color:var(--ink)}
+button:focus-visible{outline:2px solid var(--atp);outline-offset:2px}
+button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button .n{font-variant-numeric:tabular-nums;opacity:.65;margin-right:6px}
+#play{margin-left:auto;min-width:92px}
+.bar{height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--atp)}
+.caption{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:start;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.caption h2{font-family:var(--display);font-size:22px;margin:0 0 4px;line-height:1.2}
+.caption p{margin:0;max-width:65ch}
+.tally{border-left:3px solid var(--atp);padding-left:14px;min-width:150px}
+.tally b{display:block;font-family:var(--display);font-size:30px;line-height:1.1;color:var(--atp-ink);font-variant-numeric:tabular-nums}
+.tally span{font-size:13px;color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted);margin:0;padding:0;list-style:none}
+.legend li{display:flex;align-items:center;gap:6px}
+.legend svg{width:18px;min-width:18px;height:14px}
+@media (max-width:640px){.caption{grid-template-columns:1fr}#play{margin-left:0}}
+</style>
+<style>.home-link{align-self:flex-start;font:500 14px var(--body);color:var(--muted);text-decoration:none}.home-link:hover{color:var(--ink);text-decoration:underline}.pts-line{margin:0;font-size:14px;color:var(--muted)}
+.pts-line.won{color:var(--atp-ink);font-weight:600}
+button.seen::after{content:"✓";margin-left:6px}
+</style>
+</head>
+<body>
+<main>
+  <a class="home-link" href="index.html">← 返回首页</a>
+  <header>
+    <h1>新陈代谢是怎样进行的</h1>
+    <p class="lede">跟着一顿饭，看它怎样从盘子里的食物变成身体能用的能量。点“播放”，把五个步骤完整看完，可以得 5 分。</p>
+  </header>
+
+  <div class="stage-wrap">
+    <svg id="map" viewBox="0 0 1000 550" role="img" aria-label="新陈代谢动画示意图：食物被消化成葡萄糖、脂肪酸和氨基酸，随血液进入细胞，经过糖酵解和柠檬酸循环被分解，再由电子传递链转化为 ATP，为运动、合成和维持生命活动提供能量。">
+      <!-- backdrop -->
+      <rect data-s="1" x="232" y="60" width="30" height="420" rx="15" fill="var(--blood)"/>
+      <rect data-s="2,3,4,5" x="280" y="50" width="700" height="440" rx="60" fill="var(--cell)" stroke="var(--cell-edge)" stroke-width="2"/>
+      <rect data-s="3,4" x="520" y="120" width="290" height="320" rx="90" fill="var(--mito)" stroke="var(--mito-ink)" stroke-width="2"/>
+      <circle data-s="3" cx="665" cy="225" r="50" fill="none" stroke="var(--mito-ink)" stroke-width="2" stroke-dasharray="6 6"/>
+      <g data-s="4">
+        <path d="M526,372 L804,372" stroke="var(--mito-ink)" stroke-width="6" opacity=".45"/>
+        <rect x="580" y="348" width="30" height="48" rx="9" fill="var(--mito-ink)" opacity=".8"/>
+        <rect x="628" y="348" width="30" height="48" rx="9" fill="var(--mito-ink)" opacity=".8"/>
+        <rect x="676" y="348" width="30" height="48" rx="9" fill="var(--mito-ink)" opacity=".8"/>
+      </g>
+      <g data-s="4,5">
+        <rect x="738" y="352" width="14" height="42" rx="5" fill="var(--atp)"/>
+        <circle cx="745" cy="348" r="14" fill="var(--atp)"/>
+      </g>
+      <g id="routes"></g>
+
+      <!-- nodes -->
+      <g data-s="1">
+        <circle cx="70" cy="270" r="34" class="box"/>
+        <polygon points="62,252 68,255.5 68,262.5 62,266 56,262.5 56,255.5" fill="var(--glucose)"/>
+        <rect x="70" y="266" width="16" height="6" rx="3" fill="var(--fat)"/>
+        <circle cx="62" cy="284" r="6" fill="var(--amino)"/>
+      </g>
+      <rect data-s="2" x="350" y="128" width="120" height="44" rx="12" class="box"/>
+      <g data-s="5">
+        <rect x="862" y="122" width="104" height="56" rx="12" class="box"/>
+        <rect x="862" y="242" width="104" height="56" rx="12" class="box"/>
+        <rect x="862" y="362" width="104" height="56" rx="12" class="box"/>
+      </g>
+      <g id="parts"></g>
+
+      <!-- labels -->
+      <g data-s="1" text-anchor="middle">
+        <text class="lbl" x="70" y="328">食物</text>
+        <text class="sub" x="190" y="132">葡萄糖</text>
+        <text class="sub" x="190" y="252">脂肪酸</text>
+        <text class="sub" x="190" y="372">氨基酸</text>
+        <text class="sub" x="247" y="500">血液</text>
+      </g>
+      <text data-s="2,3,4,5" class="sub" x="312" y="84">细胞</text>
+      <g data-s="2" text-anchor="middle">
+        <text class="lbl" x="410" y="155">糖酵解</text>
+        <text class="sub" x="520" y="78">2 ATP</text>
+      </g>
+      <g data-s="3">
+        <text class="sub" x="692" y="152">线粒体</text>
+        <text class="lbl" x="665" y="222" text-anchor="middle">柠檬酸</text>
+        <text class="lbl" x="665" y="239" text-anchor="middle">循环</text>
+        <text class="sub" x="676" y="36">排出 CO₂</text>
+      </g>
+      <g data-s="4">
+        <text class="lbl" x="712" y="300">电子</text>
+        <text class="lbl" x="712" y="317">传递链</text>
+        <text class="sub" x="600" y="528" text-anchor="end">O₂ 进入</text>
+        <text class="sub" x="692" y="528">H₂O 排出</text>
+      </g>
+      <g data-s="5" text-anchor="middle">
+        <text class="lbl" x="914" y="146">运动</text><text class="sub" x="914" y="164">肌肉收缩</text>
+        <text class="lbl" x="914" y="266">合成</text><text class="sub" x="914" y="284">蛋白质、DNA</text>
+        <text class="lbl" x="914" y="386">维持</text><text class="sub" x="914" y="404">离子泵、体温</text>
+      </g>
+    </svg>
+  </div>
+
+  <ul class="legend" aria-label="图例">
+    <li><svg viewBox="-9 -7 18 14"><polygon points="0,-6 5.2,-3 5.2,3 0,6 -5.2,3 -5.2,-3" fill="var(--glucose)"/></svg>葡萄糖</li>
+    <li><svg viewBox="-9 -7 18 14"><polygon points="0,-5 5,4 -5,4" fill="var(--glucose)"/></svg>丙酮酸</li>
+    <li><svg viewBox="-9 -7 18 14"><rect x="-8" y="-3" width="16" height="6" rx="3" fill="var(--fat)"/></svg>脂肪酸</li>
+    <li><svg viewBox="-9 -7 18 14"><circle r="5" fill="var(--amino)"/></svg>氨基酸</li>
+    <li><svg viewBox="-9 -7 18 14"><rect x="-4" y="-4" width="8" height="8" transform="rotate(45)" fill="var(--carrier)"/></svg>能量载体（NADH）</li>
+    <li><svg viewBox="-9 -7 18 14"><circle r="3.5" fill="var(--proton)"/></svg>质子（H⁺）</li>
+    <li><svg viewBox="-9 -7 18 14"><circle r="4" fill="var(--gas)"/></svg>气体或水</li>
+    <li><svg viewBox="-9 -7 18 14"><polygon points="0,-7 2,-2.2 7,-2.2 3,1 4.5,6.5 0,3.4 -4.5,6.5 -3,1 -7,-2.2 -2,-2.2" fill="var(--atp)"/></svg>ATP</li>
+    <li><svg viewBox="-9 -7 18 14"><circle r="4" fill="none" stroke="var(--atp)" stroke-width="2"/></svg>ADP（用过的 ATP）</li>
+  </ul>
+
+  <div class="controls" id="controls">
+    <button type="button" id="play" aria-label="播放动画">播放</button>
+  </div>
+  <div class="bar" aria-hidden="true"><i id="prog"></i></div>
+  <p class="pts-line" id="pts-line" aria-live="polite"></p>
+
+  <section class="caption" aria-live="polite">
+    <div>
+      <h2 id="cap-title"></h2>
+      <p id="cap-text"></p>
+    </div>
+    <div class="tally">
+      <b id="tally-n">0</b>
+      <span>每个葡萄糖分子累计生成的 ATP</span>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+  var NS='http://www.w3.org/2000/svg';
+  var STEPS=[
+    {name:'消化',atp:'0',
+     text:'食物先被分解成小分子：碳水化合物变成葡萄糖，脂肪变成脂肪酸，蛋白质变成氨基酸。血液再把它们送到全身的每一个细胞。'},
+    {name:'糖酵解',atp:'2',
+     text:'在细胞质里，一个葡萄糖分子（含 6 个碳）被拆成两个丙酮酸分子（各含 3 个碳）。这一步不需要氧气，很快就能得到 2 个 ATP，数量不多，但来得快。'},
+    {name:'柠檬酸循环',atp:'4',
+     text:'丙酮酸、脂肪酸和氨基酸进入线粒体，加入一连串周而复始的反应。它们的碳变成 CO₂ 离开，也就是你呼出去的气体。这个循环再生成 2 个 ATP，并把大部分能量装到 NADH 这类载体上。'},
+    {name:'电子传递链',atp:'30–32',
+     text:'载体把电子交给线粒体内膜上的蛋白质。电子沿着这条链一路传给氧气，生成水；同时质子被泵到膜的另一侧。质子再经过 ATP 合酶流回来，细胞里的大部分 ATP 就是这样造出来的。这也是我们必须呼吸的原因。'},
+    {name:'消耗 ATP',atp:'30–32',
+     text:'细胞干活靠的就是 ATP：肌肉收缩、离子泵运转，还有合成新的蛋白质、DNA 和能量储备。用过的 ATP 变成 ADP，回到线粒体重新“充电”。把分子拆开叫分解代谢，把分子合成起来叫合成代谢，两者加在一起就是新陈代谢。'}
+  ];
+  // type, path, count, seconds per trip, steps it belongs to
+  var STREAMS=[
+    ['glucose','M95,255 C130,200 150,150 200,150 L300,150',3,5,[1]],
+    ['fat','M104,270 L300,270',3,5,[1]],
+    ['amino','M95,285 C130,340 150,390 200,390 L300,390',3,5,[1]],
+    ['glucose','M300,150 L352,150',2,2.4,[2]],
+    ['pyruvate','M470,145 C530,145 560,190 617,212',2,3.2,[2,3]],
+    ['pyruvate','M470,157 C520,165 550,215 616,232',2,3.2,[2,3]],
+    ['atp','M420,128 C430,85 600,85 862,138',2,5,[2]],
+    ['fat','M300,270 C430,270 520,262 618,240',3,5,[3]],
+    ['amino','M300,390 C420,390 520,300 622,248',3,5,[3]],
+    ['carbon','M665,175 A50,50 0 1 1 664.9,175',6,5,[3]],
+    ['gas','M665,175 L665,22',3,4,[3]],
+    ['carrier','M665,277 C665,320 620,325 600,348',3,3.2,[3,4]],
+    ['electron','M595,360 L691,360',5,1.6,[4]],
+    ['proton','M595,350 L595,408',2,2,[4]],
+    ['proton','M643,350 L643,408',2,2,[4]],
+    ['proton','M691,350 L691,408',2,2,[4]],
+    ['proton','M745,410 L745,338',3,1.6,[4]],
+    ['gas','M610,535 C615,470 640,420 690,396',3,4,[4]],
+    ['gas','M700,396 C690,450 670,500 680,535',3,4,[4]],
+    ['atp','M760,345 C830,330 835,200 862,160',3,4,[4,5]],
+    ['atp','M760,345 C800,345 820,280 862,272',3,4,[4,5]],
+    ['atp','M760,350 C800,360 820,390 862,390',3,4,[4,5]],
+    ['adp','M862,285 C835,320 800,372 768,372',3,4,[5]]
+  ];
+  function el(n,a){var e=document.createElementNS(NS,n);for(var k in a)e.setAttribute(k,a[k]);return e;}
+  function shape(t){
+    switch(t){
+      case 'glucose':return el('polygon',{points:'0,-7 6,-3.5 6,3.5 0,7 -6,3.5 -6,-3.5',fill:'var(--glucose)'});
+      case 'pyruvate':return el('polygon',{points:'0,-5.5 5.5,4.5 -5.5,4.5',fill:'var(--glucose)'});
+      case 'fat':return el('rect',{x:-8,y:-3,width:16,height:6,rx:3,fill:'var(--fat)'});
+      case 'amino':return el('circle',{r:5.5,fill:'var(--amino)'});
+      case 'carbon':return el('circle',{r:4,fill:'var(--mito-ink)'});
+      case 'gas':return el('circle',{r:4,fill:'var(--gas)'});
+      case 'carrier':return el('rect',{x:-4.5,y:-4.5,width:9,height:9,transform:'rotate(45)',fill:'var(--carrier)'});
+      case 'electron':return el('circle',{r:2.5,fill:'var(--carrier)'});
+      case 'proton':return el('circle',{r:3.5,fill:'var(--proton)'});
+      case 'adp':return el('circle',{r:4.5,fill:'var(--panel)',stroke:'var(--atp)','stroke-width':2});
+      default:return el('polygon',{points:'0,-8 2.3,-2.5 8,-2.5 3.4,1.2 5.1,7.4 0,3.9 -5.1,7.4 -3.4,1.2 -8,-2.5 -2.3,-2.5',fill:'var(--atp)',stroke:'var(--atp-ink)','stroke-width':.8});
+    }
+  }
+  var routes=document.getElementById('routes'),parts=document.getElementById('parts'),items=[];
+  STREAMS.forEach(function(s){
+    var p=el('path',{d:s[1],'class':'route','data-s':s[4].join(',')});
+    routes.appendChild(p);
+    var len=p.getTotalLength();
+    var g=el('g',{'data-s':s[4].join(',')});
+    parts.appendChild(g);
+    for(var i=0;i<s[2];i++){
+      var w=el('g',{});w.appendChild(shape(s[0]));g.appendChild(w);
+      items.push({node:w,path:p,len:len,dur:s[3],off:i/s[2]});
+    }
+  });
+  function place(t){
+    for(var i=0;i<items.length;i++){
+      var it=items[i],u=((t/it.dur)+it.off)%1,pt=it.path.getPointAtLength(u*it.len);
+      it.node.setAttribute('transform','translate('+pt.x.toFixed(1)+','+pt.y.toFixed(1)+')');
+      it.node.setAttribute('opacity',Math.min(1,u*8,(1-u)*8).toFixed(2));
+    }
+  }
+
+  var controls=document.getElementById('controls'),playBtn=document.getElementById('play'),btns=[];
+  STEPS.forEach(function(s,i){
+    var b=document.createElement('button');b.type='button';b.id='step-'+(i+1);
+    b.innerHTML='<span class="n">'+(i+1)+'</span>'+s.name;
+    b.addEventListener('click',function(){setStep(i);stepStart=clock;ended=false;});
+    controls.insertBefore(b,playBtn);btns.push(b);
+  });
+  var staged=[].slice.call(document.querySelectorAll('[data-s]'));
+  var step=0;
+  function setStep(i){
+    step=i;var n=String(i+1);
+    staged.forEach(function(e){e.classList.toggle('off',e.getAttribute('data-s').split(',').indexOf(n)<0);});
+    btns.forEach(function(b,k){b.setAttribute('aria-pressed',k===i?'true':'false');});
+    document.getElementById('cap-title').textContent=(i+1)+'. '+STEPS[i].name;
+    document.getElementById('cap-text').textContent=STEPS[i].text;
+    document.getElementById('tally-n').textContent=STEPS[i].atp;
+  }
+
+  var HOLD=9,clock=0,stepStart=0,last=null,prog=document.getElementById('prog');
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var playing=false; /* starts still; the learner presses Play */
+  function label(){playBtn.textContent=playing?'暂停':'播放';playBtn.setAttribute('aria-label',playing?'暂停动画':'播放动画');}
+  playBtn.addEventListener('click',function(){
+    playing=!playing;last=null;
+    if(playing&&ended){ended=false;var n=0;for(var i=0;i<STEPS.length;i++)if(!seen[i]){n=i;break;}setStep(n);stepStart=clock;}
+    label();if(playing)requestAnimationFrame(tick);
+  });
+  /* Points: watching every step to the end earns 5 points, saved for the home page. */
+  var PAGE_ID='metabolism',PTS=5,seen=[],ended=false,ptsLine=document.getElementById('pts-line');
+  var T={"todo": "把五个步骤完整看完，可以得 5 分。", "have": "这个动画的 5 分已经拿到了（已保存）。", "done": "五个步骤都看完了，5 分到手，已保存。", "already": "又完整看了一遍。这个动画的 5 分之前已经拿到了。", "missing": "还差一点。点“播放”把跳过的步骤看完：第 ", "missingEnd": " 步。", "nosave": "这个浏览器窗口无法保存分数。请换用 Chrome、Edge 或 Safari，并且不要用无痕模式。"};
+  function hasPts(){try{var r=JSON.parse(localStorage.getItem('study-points:'+PAGE_ID)||'null');return !!(r&&r.best>=PTS);}catch(e){return null;}}
+  function markSeen(){btns.forEach(function(b,i){b.classList.toggle('seen',!!seen[i]);});}
+  function finish(){
+    playing=false;last=null;ended=true;label();prog.style.width='100%';
+    var missing=[];for(var i=0;i<STEPS.length;i++)if(!seen[i])missing.push(i+1);
+    if(missing.length){ptsLine.textContent=T.missing+missing.join(', ')+T.missingEnd;return;}
+    var had=hasPts();
+    try{localStorage.setItem('study-points:'+PAGE_ID,JSON.stringify({best:PTS,max:PTS}));}catch(e){had=null;}
+    ptsLine.textContent=had===null?T.nosave:(had?T.already:T.done);
+    ptsLine.classList.toggle('won',had!==null);
+  }
+  (function(){var h=hasPts();ptsLine.textContent=h===null?T.nosave:(h?T.have:T.todo);ptsLine.classList.toggle('won',!!h);})();
+  function tick(now){
+    if(!playing)return;
+    if(last!==null)clock+=Math.min(.1,(now-last)/1000);
+    last=now;
+    if(clock-stepStart>=HOLD){
+      seen[step]=true;markSeen();
+      if(step===STEPS.length-1){finish();return;}
+      setStep(step+1);stepStart=clock;
+    }
+    prog.style.width=((clock-stepStart)/HOLD*100).toFixed(1)+'%';
+    place(clock);
+    requestAnimationFrame(tick);
+  }
+  setStep(0);place(1.3);label();
+  if(playing)requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

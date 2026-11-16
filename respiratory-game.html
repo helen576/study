@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Breath Mission</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a single mission card under a status strip (five-step route + points meter). */
+:root{
+  --bg:#f2f5f4; --panel:#ffffff; --ink:#16282b; --muted:#587074; --line:#c9d6d6;
+  --cell:#e3f0ee; --cell-edge:#8fb8b3; --mito:#f8dccf; --mito-ink:#b5553a; --blood:#f3d3d3;
+  --glucose:#3f62d6; --fat:#c2488a; --amino:#5f9420; --carrier:#12909a; --proton:#8556d8;
+  --gas:#7c8f96; --atp:#e39a0c; --atp-ink:#8a5a00;
+  --rich:#d23b3b; --poor:#3f5fc9; --o2:#e0552f; --co2:#5d7f9c; --food:#a9743a; --waste:#6b4a2a;
+  --water:#2f9fd0; --gland:#f3e2a8; --bread:#e3b877; --egg:#fffdf5; --medal:#e39a0c;
+  --good:#2f7d3a; --good-bg:#e2f2e0; --bad:#b3402e; --bad-bg:#fae4df;
+  --display:"Bricolage Grotesque","Trebuchet MS",sans-serif;
+  --body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root{ color-scheme:dark;
+  --bg:#0f1a1c; --panel:#17272a; --ink:#e6f0ef; --muted:#93aaad; --line:#2f4649;
+  --cell:#16302f; --cell-edge:#3f7a74; --mito:#44271f; --mito-ink:#f09a7c; --blood:#4a2428;
+  --glucose:#8fa6ff; --fat:#f08cc0; --amino:#a6d65a; --carrier:#4fd0d8; --proton:#b99aff;
+  --gas:#9fb2b8; --atp:#ffc24a; --atp-ink:#ffd98a;
+  --rich:#ff7a70; --poor:#8fa6ff; --o2:#ff9a6a; --co2:#9fc0dc; --food:#d9a56a; --waste:#b08a62;
+  --water:#6cc6ee; --gland:#6a5a22; --bread:#c79a5a; --egg:#f3efe2; --medal:#ffc24a;
+  --good:#8fd69a; --good-bg:#173a20; --bad:#f5a090; --bad-bg:#4a211a; } }
+*{box-sizing:border-box}
+html,body{margin:0}
+.home-link{align-self:flex-start;font:500 14px var(--body);color:var(--muted);text-decoration:none}
+.home-link:hover{color:var(--ink);text-decoration:underline}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5}
+main{max-width:760px;margin:0 auto;padding:24px 18px 48px;display:flex;flex-direction:column;gap:16px}
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+h1{font-family:var(--display);font-size:30px;line-height:1.1;margin:0;letter-spacing:-.01em}
+.meter{display:flex;align-items:center;gap:10px;min-width:220px;flex:1;max-width:400px}
+button.restart{font-size:14px;padding:6px 12px;border-radius:999px;background:var(--panel)}
+.meter .track{flex:1;height:14px;border-radius:7px;background:var(--line);overflow:hidden}
+.meter .fill{height:100%;width:0;background:var(--atp);transition:width .5s ease}
+.meter b{font-family:var(--display);font-size:20px;color:var(--atp-ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.route{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:0;padding:0;font-size:13px}
+.route li{padding:5px 11px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--panel)}
+.route li.now{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
+.route li.past{border-color:var(--cell-edge);color:var(--ink);background:var(--cell)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:16px}
+.where{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin:0}
+h2{font-family:var(--display);font-size:24px;line-height:1.2;margin:0;text-wrap:balance}
+p{margin:0;max-width:62ch}
+.opts{display:flex;flex-direction:column;gap:10px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+.cols>div{display:flex;flex-direction:column;gap:10px}
+.cols h3,.done-list h3{font-size:13px;font-weight:600;color:var(--muted);margin:0}
+button{font:500 16px var(--body);color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:12px 16px;cursor:pointer;text-align:left}
+button:hover:not(:disabled){border-color:var(--ink)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--atp);outline-offset:2px}
+button[aria-pressed="true"]{border-color:var(--ink);background:var(--cell)}
+button.right{background:var(--good-bg);border-color:var(--good);color:var(--ink)}
+button.wrong{background:var(--bad-bg);border-color:var(--bad);color:var(--muted);text-decoration:line-through}
+button:disabled{cursor:default}
+button.go{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600;align-self:flex-start;text-align:center;padding:12px 22px}
+.shake{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+@media (prefers-reduced-motion: reduce){.shake{animation:none}.meter .fill{transition:none}}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row span{flex:1;min-width:200px}
+.row button{padding:8px 14px;font-size:15px}
+.done-list ol{margin:6px 0 0;padding-left:22px}
+.field{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+label{font-weight:600}
+input{font:500 18px var(--body);color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:11px 14px;width:100%;max-width:120px}
+.fb{border-radius:12px;padding:12px 16px;border-left:5px solid var(--line);background:var(--bg)}
+.fb:empty{display:none}
+.fb.ok{border-color:var(--good);background:var(--good-bg)}
+.fb.no{border-color:var(--bad);background:var(--bad-bg)}
+.fb strong{display:block}
+.qhead{display:flex;gap:18px;align-items:center}
+.qhead>div:first-child{flex:1;display:flex;flex-direction:column;gap:10px}
+.art{flex:0 0 190px;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:8px}
+.art svg{display:block;width:100%;height:auto}
+.organ{fill:var(--mito);stroke:var(--mito-ink);stroke-width:2.5}
+.stars{display:inline-flex;gap:2px;vertical-align:-3px;margin-right:8px}
+.stars svg{width:20px;height:20px;animation:pop .4s backwards}
+.stars svg:nth-child(2){animation-delay:.12s}
+.stars svg:nth-child(3){animation-delay:.24s}
+@keyframes pop{0%{transform:scale(0)}70%{transform:scale(1.3)}100%{transform:scale(1)}}
+@media (max-width:520px){.qhead{flex-direction:column-reverse;align-items:stretch}.art{flex:none;width:100%;max-width:240px;align-self:center}}
+@media (prefers-reduced-motion: reduce){.stars svg{animation:none}}
+.best{font-size:14px;color:var(--muted);margin:-6px 0 0}
+.big{font-family:var(--display);font-size:44px;line-height:1;color:var(--atp-ink);font-variant-numeric:tabular-nums}
+@media (max-width:520px){.cols{grid-template-columns:1fr}.card{padding:18px}}
+</style>
+</head>
+<body>
+<main>
+  <a class="home-link" href="index.html">← All pages</a>
+  <div class="top">
+    <h1>Breath Mission</h1>
+    <div class="meter" aria-label="Points earned">
+      <div class="track"><div class="fill" id="fill"></div></div>
+      <b id="score">0 points</b>
+      <button type="button" class="restart" id="restart">Restart</button>
+    </div>
+  </div>
+  <p class="best" id="best"></p>
+  <ol class="route" id="route" aria-label="Steps"></ol>
+  <section class="card" id="card"></section>
+</main>
+
+<script>
+(function(){
+  var CFG={
+ "pageId": "respiratory-game",
+ "stages": [
+  {
+   "name": "Breathing in",
+   "where": "Chest and diaphragm"
+  },
+  {
+   "name": "Airways",
+   "where": "Nose to lungs"
+  },
+  {
+   "name": "Air sacs",
+   "where": "Deep in the lungs"
+  },
+  {
+   "name": "Delivery",
+   "where": "In the blood"
+  },
+  {
+   "name": "Breathing out",
+   "where": "Chest and diaphragm"
+  }
+ ],
+ "intro": {
+  "heading": "A breath is coming in. Get its oxygen to the body.",
+  "text": "Guide one breath through the respiratory system by making the right call at each step.",
+  "art": "lungs"
+ },
+ "predict": {
+  "q": "What makes air rush into your lungs when you breathe in?",
+  "opts": [
+   "A muscle under the lungs pulls down and makes more room",
+   "The lungs squeeze themselves open",
+   "The nose sucks the air in",
+   "The heart pumps the air in"
+  ],
+  "why": "The diaphragm, a muscle under the lungs, pulls down. The chest gets bigger and air flows in to fill the space."
+ },
+ "ranks": [
+  "Lung Legend",
+  "Airway Expert",
+  "Breathing Beginner"
+ ],
+ "endHeading": "The oxygen made it to your cells.",
+ "summary": "The whole story in one line: the diaphragm pulls air in, the airways carry it to the air sacs, oxygen moves into the blood and carbon dioxide moves out, and you breathe the carbon dioxide away.",
+ "questions": [
+  {
+   "s": 0,
+   "type": "choice",
+   "q": "Which muscle does most of the work when you breathe in?",
+   "opts": [
+    "The diaphragm",
+    "The biceps",
+    "The heart"
+   ],
+   "hint": "It is a dome-shaped muscle that sits under your lungs.",
+   "why": "The diaphragm is the main breathing muscle. Muscles between your ribs help too.",
+   "art": "lungs-in"
+  },
+  {
+   "s": 0,
+   "type": "choice",
+   "q": "When the diaphragm tightens, which way does it move?",
+   "opts": [
+    "Down, making more room in the chest",
+    "Up, squeezing the lungs",
+    "It does not move"
+   ],
+   "hint": "Air comes in when the chest gets bigger.",
+   "why": "It pulls down and flattens. That makes the chest bigger, so air flows in.",
+   "art": "lungs-in"
+  },
+  {
+   "s": 1,
+   "type": "order",
+   "q": "Put the path of air in order, starting from outside the body.",
+   "steps": [
+    "Nose or mouth",
+    "Windpipe (trachea)",
+    "Bronchi",
+    "Bronchioles",
+    "Air sacs (alveoli)"
+   ],
+   "hint": "The tubes get smaller and smaller as the air goes deeper.",
+   "why": "Air goes from the nose or mouth down the windpipe, into the two bronchi, through the tiny bronchioles and into the air sacs.",
+   "art": "airway"
+  },
+  {
+   "s": 1,
+   "type": "choice",
+   "q": "The airways are lined with sticky mucus and tiny hairs called cilia. What is their job?",
+   "opts": [
+    "Trap dust and germs and sweep them out",
+    "Absorb oxygen",
+    "Make your voice"
+   ],
+   "hint": "Think about what you would not want reaching your lungs.",
+   "why": "Mucus traps dust and germs, and the cilia sweep it up and out of the airways.",
+   "art": "cilia"
+  },
+  {
+   "s": 2,
+   "type": "match",
+   "q": "Match each part to what it does.",
+   "leftTitle": "Part",
+   "rightTitle": "Job",
+   "pairs": [
+    [
+     "Alveoli",
+     "Tiny sacs where gases swap"
+    ],
+    [
+     "Capillaries",
+     "Tiny blood vessels wrapped around the sacs"
+    ],
+    [
+     "Trachea",
+     "The tube that carries air toward the lungs"
+    ]
+   ],
+   "hint": "Two of these are tiny. One is a big tube.",
+   "why": "The trachea brings the air down, the alveoli hold it, and the capillaries around them carry the blood that picks up oxygen.",
+   "art": "alveoli"
+  },
+  {
+   "s": 2,
+   "type": "sort",
+   "q": "In the air sacs, two gases swap places. Which way does each one go?",
+   "cats": [
+    "Into the blood",
+    "Out of the blood"
+   ],
+   "items": [
+    [
+     "Oxygen",
+     0
+    ],
+    [
+     "Carbon dioxide",
+     1
+    ]
+   ],
+   "hint": "Your body wants one of these gases and needs to get rid of the other.",
+   "why": "Oxygen moves into the blood. Carbon dioxide moves out of the blood into the air sac, ready to be breathed out.",
+   "art": "alveoli"
+  },
+  {
+   "s": 3,
+   "type": "choice",
+   "q": "What carries oxygen around your body in the blood?",
+   "opts": [
+    "Red blood cells",
+    "White blood cells",
+    "Platelets"
+   ],
+   "hint": "They give blood its colour.",
+   "why": "Red blood cells are packed with haemoglobin, a protein that holds on to oxygen.",
+   "art": "blood"
+  },
+  {
+   "s": 3,
+   "type": "choice",
+   "q": "Why do your cells need oxygen?",
+   "opts": [
+    "To release energy from food",
+    "To make bones hard",
+    "To keep blood moving"
+   ],
+   "hint": "It is about energy.",
+   "why": "Cells use oxygen to release the energy stored in food. This is called cellular respiration.",
+   "art": "cellart"
+  },
+  {
+   "s": 4,
+   "type": "choice",
+   "q": "What does the diaphragm do when you breathe out?",
+   "opts": [
+    "It relaxes and moves up",
+    "It tightens and moves down",
+    "It stops working"
+   ],
+   "hint": "It is the opposite of breathing in.",
+   "why": "The diaphragm relaxes and rises. The chest gets smaller and air is pushed out.",
+   "art": "lungs-out"
+  },
+  {
+   "s": 4,
+   "type": "number",
+   "q": "The air you breathe in is about 21% oxygen. The air you breathe out is about 16% oxygen. How many percentage points of oxygen did your body take?",
+   "label": "Percentage points",
+   "min": 5,
+   "max": 5,
+   "hint": "Subtract the smaller number from the bigger one.",
+   "why": "21 minus 16 is 5. Your body keeps only part of the oxygen in each breath.",
+   "art": "lungs-out"
+  },
+  {
+   "s": 4,
+   "type": "choice",
+   "q": "Why do you breathe faster when you run?",
+   "opts": [
+    "Your muscles need more oxygen and make more carbon dioxide",
+    "Your lungs get smaller",
+    "The air has less oxygen in it"
+   ],
+   "hint": "Working muscles use more energy.",
+   "why": "Working muscles use more oxygen and make more carbon dioxide, so you breathe faster and deeper to keep up.",
+   "art": "pulse"
+  }
+ ]
+};
+  var STAGES=CFG.stages,Q=CFG.questions,MAX=Q.length,PAGE_ID=CFG.pageId; /* one question, one point */
+  var card=document.getElementById('card'),route=document.getElementById('route');
+  var st={i:-1,score:0,guess:null};
+  var UNIT=CFG.unit||'points',UNIT1=CFG.unitOne||'point';
+  /* Illustrations: small drawings shown beside each question. */
+  var ART={"airway": "<path d=\"M100,4 L100,46\" stroke=\"var(--mito-ink)\" stroke-width=\"13\" stroke-linecap=\"round\"/><path d=\"M100,46 L60,74 M100,46 L140,74\" stroke=\"var(--mito-ink)\" stroke-width=\"9\" stroke-linecap=\"round\"/><path d=\"M60,74 L36,98 M60,74 L74,102 M140,74 L164,98 M140,74 L126,102\" stroke=\"var(--mito-ink)\" stroke-width=\"5\" stroke-linecap=\"round\"/><circle cx=\"30\" cy=\"106\" r=\"9\" class=\"organ\"/><circle cx=\"42\" cy=\"112\" r=\"9\" class=\"organ\"/><circle cx=\"72\" cy=\"112\" r=\"9\" class=\"organ\"/><circle cx=\"84\" cy=\"106\" r=\"9\" class=\"organ\"/><circle cx=\"170\" cy=\"106\" r=\"9\" class=\"organ\"/><circle cx=\"158\" cy=\"112\" r=\"9\" class=\"organ\"/><circle cx=\"128\" cy=\"112\" r=\"9\" class=\"organ\"/><circle cx=\"116\" cy=\"106\" r=\"9\" class=\"organ\"/>", "alveoli": "<path d=\"M30,96 C60,128 100,128 100,112\" fill=\"none\" stroke=\"var(--poor)\" stroke-width=\"11\" stroke-linecap=\"round\"/><path d=\"M100,112 C100,128 150,126 174,92\" fill=\"none\" stroke=\"var(--rich)\" stroke-width=\"11\" stroke-linecap=\"round\"/><circle cx=\"74\" cy=\"44\" r=\"24\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"3\"/><circle cx=\"120\" cy=\"40\" r=\"24\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"3\"/><circle cx=\"98\" cy=\"76\" r=\"24\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"3\"/><circle cx=\"140\" cy=\"76\" r=\"19\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"3\"/><circle cx=\"56\" cy=\"78\" r=\"17\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"3\"/><circle cx=\"92\" cy=\"70\" r=\"4.5\" fill=\"var(--o2)\"/><circle cx=\"106\" cy=\"84\" r=\"4.5\" fill=\"var(--o2)\"/><circle cx=\"124\" cy=\"44\" r=\"4.5\" fill=\"var(--co2)\"/><circle cx=\"72\" cy=\"40\" r=\"4.5\" fill=\"var(--co2)\"/>", "blood": "<rect x=\"4\" y=\"28\" width=\"192\" height=\"74\" rx=\"37\" fill=\"var(--blood)\"/><g transform=\"rotate(-20 40 58)\"><ellipse cx=\"40\" cy=\"58\" rx=\"13\" ry=\"9\" fill=\"var(--rich)\"/><ellipse cx=\"40\" cy=\"58\" rx=\"6\" ry=\"3.5\" fill=\"#000\" opacity=\".16\"/></g><g transform=\"rotate(15 78 80)\"><ellipse cx=\"78\" cy=\"80\" rx=\"13\" ry=\"9\" fill=\"var(--rich)\"/><ellipse cx=\"78\" cy=\"80\" rx=\"6\" ry=\"3.5\" fill=\"#000\" opacity=\".16\"/></g><g transform=\"rotate(10 112 50)\"><ellipse cx=\"112\" cy=\"50\" rx=\"13\" ry=\"9\" fill=\"var(--rich)\"/><ellipse cx=\"112\" cy=\"50\" rx=\"6\" ry=\"3.5\" fill=\"#000\" opacity=\".16\"/></g><g transform=\"rotate(-25 160 66)\"><ellipse cx=\"160\" cy=\"66\" rx=\"13\" ry=\"9\" fill=\"var(--rich)\"/><ellipse cx=\"160\" cy=\"66\" rx=\"6\" ry=\"3.5\" fill=\"#000\" opacity=\".16\"/></g><g transform=\"rotate(30 70 46)\"><ellipse cx=\"70\" cy=\"46\" rx=\"13\" ry=\"9\" fill=\"var(--rich)\"/><ellipse cx=\"70\" cy=\"46\" rx=\"6\" ry=\"3.5\" fill=\"#000\" opacity=\".16\"/></g><circle cx=\"134\" cy=\"80\" r=\"11\" fill=\"var(--egg)\" stroke=\"var(--line)\" stroke-width=\"2\"/><circle cx=\"104\" cy=\"76\" r=\"3\" fill=\"var(--atp)\"/><circle cx=\"48\" cy=\"82\" r=\"3\" fill=\"var(--atp)\"/><circle cx=\"150\" cy=\"44\" r=\"3\" fill=\"var(--atp)\"/>", "cellart": "<rect x=\"10\" y=\"10\" width=\"180\" height=\"110\" rx=\"46\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"4\"/><circle cx=\"70\" cy=\"62\" r=\"26\" fill=\"var(--proton)\" opacity=\".55\"/><circle cx=\"70\" cy=\"62\" r=\"10\" fill=\"var(--proton)\"/><g transform=\"translate(108 50) scale(.42)\"><rect x=\"22\" y=\"26\" width=\"156\" height=\"80\" rx=\"40\" fill=\"var(--mito)\" stroke=\"var(--mito-ink)\" stroke-width=\"3\"/><path d=\"M42,70 q10,-34 20,0 t20,0 t20,0 t20,0 t20,0 t20,0\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/></g><g transform=\"translate(96 76) scale(.3) rotate(20 100 65)\"><rect x=\"22\" y=\"26\" width=\"156\" height=\"80\" rx=\"40\" fill=\"var(--mito)\" stroke=\"var(--mito-ink)\" stroke-width=\"3\"/><path d=\"M42,70 q10,-34 20,0 t20,0 t20,0 t20,0 t20,0 t20,0\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/></g><circle cx=\"40\" cy=\"96\" r=\"4\" fill=\"var(--cell-edge)\"/><circle cx=\"150\" cy=\"34\" r=\"4\" fill=\"var(--cell-edge)\"/><circle cx=\"124\" cy=\"34\" r=\"3\" fill=\"var(--cell-edge)\"/>", "cilia": "<rect x=\"6\" y=\"92\" width=\"188\" height=\"32\" rx=\"8\" class=\"organ\"/><path d=\"M18,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M33,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M48,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M63,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M78,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M93,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M108,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M123,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M138,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M153,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M168,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M183,92 q6,-18 10,-34\" fill=\"none\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\"/><path d=\"M10,54 C50,42 150,42 190,54\" fill=\"none\" stroke=\"var(--amino)\" stroke-width=\"9\" stroke-linecap=\"round\" opacity=\".55\"/><circle cx=\"54\" cy=\"46\" r=\"5\" fill=\"var(--gas)\"/><circle cx=\"98\" cy=\"44\" r=\"6\" fill=\"var(--gas)\"/><circle cx=\"140\" cy=\"47\" r=\"4\" fill=\"var(--gas)\"/><circle cx=\"74\" cy=\"22\" r=\"4\" fill=\"var(--gas)\"/><circle cx=\"126\" cy=\"20\" r=\"5\" fill=\"var(--gas)\"/><path d=\"M150.0,20.0 L179.7,20.0\" stroke=\"var(--muted)\" stroke-width=\"2.5\" stroke-linecap=\"round\" fill=\"none\"/><polygon points=\"186.0,20.0 178.1,24.3 178.1,15.7\" fill=\"var(--muted)\"/>", "lungs": "<rect x=\"93\" y=\"4\" width=\"14\" height=\"44\" rx=\"6\" fill=\"var(--panel)\" stroke=\"var(--mito-ink)\" stroke-width=\"2.5\"/><path class=\"organ\" d=\"M92,32 C68,30 40,62 38,100 C38,116 62,118 92,104 Z\"/><path class=\"organ\" d=\"M108,32 C132,30 160,62 162,100 C162,116 138,118 108,104 Z\"/><path d=\"M92,50 L72,72 M72,72 L60,92 M72,72 L80,94 M108,50 L128,72 M128,72 L140,92 M128,72 L120,94\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\" fill=\"none\"/><path d=\"M22,123 Q100,100 178,123\" stroke=\"var(--mito-ink)\" stroke-width=\"5\" stroke-linecap=\"round\" fill=\"none\"/>", "lungs-in": "<rect x=\"93\" y=\"4\" width=\"14\" height=\"44\" rx=\"6\" fill=\"var(--panel)\" stroke=\"var(--mito-ink)\" stroke-width=\"2.5\"/><path class=\"organ\" d=\"M92,32 C68,30 40,62 38,100 C38,116 62,118 92,104 Z\"/><path class=\"organ\" d=\"M108,32 C132,30 160,62 162,100 C162,116 138,118 108,104 Z\"/><path d=\"M92,50 L72,72 M72,72 L60,92 M72,72 L80,94 M108,50 L128,72 M128,72 L140,92 M128,72 L120,94\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\" fill=\"none\"/><path d=\"M22,123 Q100,100 178,123\" stroke=\"var(--mito-ink)\" stroke-width=\"5\" stroke-linecap=\"round\" fill=\"none\"/><path d=\"M70.0,4.0 L70.0,23.7\" stroke=\"var(--o2)\" stroke-width=\"3.5\" stroke-linecap=\"round\" fill=\"none\"/><polygon points=\"70.0,30.0 65.7,22.1 74.3,22.1\" fill=\"var(--o2)\"/><path d=\"M130.0,4.0 L130.0,23.7\" stroke=\"var(--o2)\" stroke-width=\"3.5\" stroke-linecap=\"round\" fill=\"none\"/><polygon points=\"130.0,30.0 125.7,22.1 134.3,22.1\" fill=\"var(--o2)\"/><path d=\"M14.0,100.0 L14.0,117.7\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\" fill=\"none\"/><polygon points=\"14.0,124.0 9.7,116.1 18.3,116.1\" fill=\"var(--mito-ink)\"/><path d=\"M186.0,100.0 L186.0,117.7\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\" fill=\"none\"/><polygon points=\"186.0,124.0 181.7,116.1 190.3,116.1\" fill=\"var(--mito-ink)\"/>", "lungs-out": "<rect x=\"93\" y=\"4\" width=\"14\" height=\"44\" rx=\"6\" fill=\"var(--panel)\" stroke=\"var(--mito-ink)\" stroke-width=\"2.5\"/><path class=\"organ\" d=\"M92,32 C68,30 40,62 38,100 C38,116 62,118 92,104 Z\"/><path class=\"organ\" d=\"M108,32 C132,30 160,62 162,100 C162,116 138,118 108,104 Z\"/><path d=\"M92,50 L72,72 M72,72 L60,92 M72,72 L80,94 M108,50 L128,72 M128,72 L140,92 M128,72 L120,94\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\" fill=\"none\"/><path d=\"M22,123 Q100,100 178,123\" stroke=\"var(--mito-ink)\" stroke-width=\"5\" stroke-linecap=\"round\" fill=\"none\"/><path d=\"M70.0,30.0 L70.0,10.3\" stroke=\"var(--co2)\" stroke-width=\"3.5\" stroke-linecap=\"round\" fill=\"none\"/><polygon points=\"70.0,4.0 74.3,11.9 65.7,11.9\" fill=\"var(--co2)\"/><path d=\"M130.0,30.0 L130.0,10.3\" stroke=\"var(--co2)\" stroke-width=\"3.5\" stroke-linecap=\"round\" fill=\"none\"/><polygon points=\"130.0,4.0 134.3,11.9 125.7,11.9\" fill=\"var(--co2)\"/><path d=\"M14.0,124.0 L14.0,106.3\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\" fill=\"none\"/><polygon points=\"14.0,100.0 18.3,107.9 9.7,107.9\" fill=\"var(--mito-ink)\"/><path d=\"M186.0,124.0 L186.0,106.3\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\" fill=\"none\"/><polygon points=\"186.0,100.0 190.3,107.9 181.7,107.9\" fill=\"var(--mito-ink)\"/>", "medal": "<path d=\"M70,4 L92,58 L108,58 L130,4 L112,4 L100,34 L88,4 Z\" fill=\"var(--rich)\"/><circle cx=\"100\" cy=\"84\" r=\"38\" fill=\"var(--medal)\" stroke=\"var(--ink)\" stroke-width=\"3\"/><circle cx=\"100\" cy=\"84\" r=\"28\" fill=\"none\" stroke=\"#000\" stroke-opacity=\".2\" stroke-width=\"2\"/><polygon points=\"100.0,66.0 104.7,77.5 117.1,78.4 107.6,86.5 110.6,98.6 100.0,92.0 89.4,98.6 92.4,86.5 82.9,78.4 95.3,77.5\" fill=\"var(--panel)\" opacity=\".9\"/>", "pulse": "<path d=\"M6,72 L52,72 L64,52 L78,98 L94,18 L110,108 L122,72 L134,72\" fill=\"none\" stroke=\"var(--rich)\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><g transform=\"translate(126 26) scale(.44)\"><path d=\"M100,118 C36,78 26,44 48,26 C68,11 90,22 100,42 C110,22 132,11 152,26 C174,44 164,78 100,118 Z\" fill=\"var(--rich)\"/></g>"};
+  function art(name){var d=document.createElement('div');d.className='art';d.innerHTML='<svg viewBox="0 0 200 130" aria-hidden="true">'+ART[name]+'</svg>';return d;}
+  function head(where,title,name){
+    var left=h('div',{},[h('p',{'class':'where',text:where}),h('h2',{text:title})]);
+    return h('div',{'class':'qhead'},name&&ART[name]?[left,art(name)]:[left]);
+  }
+  function stars(n){
+    var s=document.createElement('span'),html='';s.className='stars';s.setAttribute('aria-hidden','true');
+    for(var i=0;i<1;i++)html+='<svg viewBox="0 0 20 20"><polygon points="10,1 12.6,7 19,7.4 14,11.6 15.6,18 10,14.4 4.4,18 6,11.6 1,7.4 7.4,7" fill="'+(i<n?'var(--atp)':'none')+'" stroke="var(--atp-ink)" stroke-width="1.2"/></svg>';
+    s.innerHTML=html;return s;
+  }
+
+  /* Points for the home page: the best score for this page is kept in the browser.
+     It is saved after every correct answer, so a half-finished game still counts. */
+  var KEY='study-points:'+PAGE_ID,startBest=0;
+  function readBest(){
+    try{
+      var r=JSON.parse(localStorage.getItem(KEY)||'null');
+      if(!r||typeof r.best!=='number')return 0;
+      /* s:1 marks the one-point-per-question scoring. Such a score carries over when questions are added or removed, capped at the new maximum. */
+      if(r.s===1)return Math.max(0,Math.min(r.best,MAX));
+      /* a save from before the marker existed, on the same scale: mark it so it carries over from now on */
+      if(r.max===MAX){localStorage.setItem(KEY,JSON.stringify({best:r.best,max:MAX,s:1}));return r.best;}
+      return 0;
+    }catch(e){return null;}
+  }
+  function saveBest(score){
+    try{var cur=readBest();if(cur===null)return false;
+      if(score>cur)localStorage.setItem(KEY,JSON.stringify({best:score,max:MAX,s:1}));
+      return true;
+    }catch(e){return false;}
+  }
+  /* The latest try is kept too, so reopening or refreshing the page carries on where it stopped. */
+  var PKEY='study-progress:'+PAGE_ID;
+  function saveProgress(i){
+    try{localStorage.setItem(PKEY,JSON.stringify({v:2,i:i,score:st.score,guess:st.guess,startBest:startBest,n:Q.length}));}catch(e){}
+  }
+  function loadProgress(){
+    try{var p=JSON.parse(localStorage.getItem(PKEY)||'null');
+      if(p&&p.v===2&&p.n===Q.length&&p.i>=0&&p.i<=Q.length&&typeof p.score==='number'&&p.score>=0&&p.score<=MAX)return p;
+    }catch(e){}
+    return null;
+  }
+  function restart(){
+    st={i:-1,score:0,guess:null};
+    try{localStorage.removeItem(PKEY);}catch(e){}
+    intro();
+  }
+  function showBest(){
+    var b=readBest(),el=document.getElementById('best');
+    el.textContent=b===null?'This browser window is not saving points. Try Chrome, Edge or Safari, outside private mode.'
+      :(b?'Your best score so far: '+b+' / '+MAX+' (saved). This is what counts on the home page.':'No score saved yet. Points are saved as you play.');
+  }
+  function h(tag,attrs,kids){
+    var e=document.createElement(tag),k;
+    for(k in attrs||{}){
+      if(k==='text')e.textContent=attrs[k];
+      else if(k==='on')for(var ev in attrs.on)e.addEventListener(ev,attrs.on[ev]);
+      else e.setAttribute(k,attrs[k]);
+    }
+    (kids||[]).forEach(function(c){e.appendChild(c);});
+    return e;
+  }
+  function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t;}return a;}
+  function shake(el){el.classList.remove('shake');void el.offsetWidth;el.classList.add('shake');}
+
+  STAGES.forEach(function(s,i){route.appendChild(h('li',{text:(i+1)+'. '+s.name}));});
+  function status(){
+    var cur=st.i<0?-1:(st.i>=Q.length?STAGES.length:Q[st.i].s);
+    [].forEach.call(route.children,function(li,i){li.className=i===cur?'now':(i<cur?'past':'');});
+    document.getElementById('fill').style.width=(st.score/MAX*100)+'%';
+    document.getElementById('score').textContent=st.score+' '+(st.score===1?UNIT1:UNIT);
+    showBest();
+  }
+  function show(nodes){card.innerHTML='';nodes.forEach(function(n){card.appendChild(n);});status();}
+
+  /* ---------- intro: the learner makes a prediction ---------- */
+  function intro(){
+    startBest=readBest()||0;
+    var fb=h('div',{'class':'fb','aria-live':'polite'});
+    var guessBtns=shuffle(CFG.predict.opts.map(function(t,i){return i;})).map(function(i){
+      return h('button',{type:'button','aria-pressed':'false',text:CFG.predict.opts[i],on:{click:function(){
+        guessBtns.forEach(function(b){b.setAttribute('aria-pressed','false');});
+        this.setAttribute('aria-pressed','true');st.guess=i;fb.textContent='';
+      }}});
+    });
+    show([
+      head('Your mission',CFG.intro.heading,CFG.intro.art),
+      h('p',{text:CFG.intro.text+' Each question is worth 1 '+UNIT1+'. You earn it by getting the answer right on your first try.'}),
+      h('p',{text:'Before you start, make a prediction. '+CFG.predict.q}),
+      h('div',{'class':'opts'},guessBtns),
+      fb,
+      h('button',{'class':'go',type:'button',text:'Start the mission',on:{click:function(){
+        if(st.guess===null){fb.textContent='Pick a guess first. There is no penalty for being wrong.';return;}
+        st.i=0;saveProgress(0);play();
+      }}})
+    ]);
+  }
+
+  /* ---------- one challenge ---------- */
+  function play(){
+    var c=Q[st.i],misses=0,fb=h('div',{'class':'fb','aria-live':'polite'}),body;
+    function miss(el){misses++;if(el)shake(el);fb.className='fb no';fb.innerHTML='';fb.appendChild(h('strong',{text:'Not quite.'}));fb.appendChild(document.createTextNode(c.hint||''));}
+    function win(){
+      var pts=misses?0:1;st.score+=pts;saveBest(st.score);saveProgress(st.i+1);
+      fb.className='fb ok';fb.innerHTML='';
+      fb.appendChild(h('strong',{},[stars(pts),document.createTextNode(pts?'Correct. +1 '+UNIT1:'Got it. No '+UNIT1+' this time, because it took more than one try.')]));
+      fb.appendChild(document.createTextNode(c.why));
+      var last=st.i===Q.length-1;
+      var next=h('button',{'class':'go',type:'button',text:last?'See your results':'Next',on:{click:function(){st.i++;st.i<Q.length?play():end();}}});
+      card.appendChild(next);status();next.focus();
+    }
+
+    if(c.type==='choice'){
+      var order=shuffle(c.opts.map(function(t,i){return i;}));
+      var btns=order.map(function(i){
+        return h('button',{type:'button',text:c.opts[i],on:{click:function(){
+          if(i===0){this.classList.add('right');btns.forEach(function(b){b.disabled=true;});win();}
+          else{this.classList.add('wrong');this.disabled=true;miss(this);}
+        }}});
+      });
+      body=h('div',{'class':'opts'},btns);
+    }
+
+    if(c.type==='match'){
+      var picked=null,left=0;
+      var L=c.pairs.map(function(p,i){
+        return h('button',{type:'button','aria-pressed':'false',text:p[0],on:{click:function(){
+          L.forEach(function(b){b.setAttribute('aria-pressed','false');});
+          this.setAttribute('aria-pressed','true');picked=i;
+        }}});
+      });
+      var R=shuffle(c.pairs.map(function(p,i){return i;})).map(function(i){
+        return h('button',{type:'button',text:c.pairs[i][1],on:{click:function(){
+          if(picked===null){fb.className='fb';fb.textContent='Choose an item on the left first, then its match.';return;}
+          if(picked===i){
+            this.classList.add('right');this.disabled=true;
+            L[i].classList.add('right');L[i].disabled=true;L[i].setAttribute('aria-pressed','false');
+            picked=null;left++;fb.className='fb';fb.textContent='';
+            if(left===c.pairs.length)win();
+          }else miss(this);
+        }}});
+      });
+      body=h('div',{'class':'cols'},[
+        h('div',{},[h('h3',{text:c.leftTitle})].concat(L)),
+        h('div',{},[h('h3',{text:c.rightTitle})].concat(R))
+      ]);
+    }
+
+    if(c.type==='order'){
+      var nextStep=0,list=h('ol',{});
+      var doneBox=h('div',{'class':'done-list'},[h('h3',{text:'Your order so far'}),list]);
+      var sb=shuffle(c.steps.map(function(t,i){return i;})).map(function(i){
+        return h('button',{type:'button',text:c.steps[i],on:{click:function(){
+          if(i===nextStep){
+            this.classList.add('right');this.disabled=true;list.appendChild(h('li',{text:c.steps[i]}));
+            nextStep++;fb.className='fb';fb.textContent='';
+            if(nextStep===c.steps.length)win();
+          }else miss(this);
+        }}});
+      });
+      body=h('div',{'class':'opts'},sb.concat([doneBox]));
+    }
+
+    if(c.type==='sort'){
+      var remaining=c.items.length;
+      body=h('div',{},shuffle(c.items).map(function(it){
+        var bs=c.cats.map(function(cat,k){
+          return h('button',{type:'button',text:cat,on:{click:function(){
+            if(k===it[1]){this.classList.add('right');bs.forEach(function(b){b.disabled=true;});remaining--;
+              fb.className='fb';fb.textContent='';if(remaining===0)win();}
+            else{this.classList.add('wrong');this.disabled=true;miss(this);}
+          }}});
+        });
+        return h('div',{'class':'row'},[h('span',{text:it[0]})].concat(bs));
+      }));
+    }
+
+    if(c.type==='number'){
+      var inp=h('input',{id:'answer-'+st.i,type:'number',inputmode:'numeric',min:'0',max:'9999'});
+      var check=h('button',{'class':'go',type:'submit',text:'Check'});
+      body=h('form',{'class':'field',on:{submit:function(e){
+        e.preventDefault();
+        var v=parseFloat(inp.value);
+        if(isNaN(v)){fb.className='fb';fb.textContent='Type a number, then press Check.';return;}
+        if(v>=c.min&&v<=c.max){inp.disabled=true;check.disabled=true;check.style.display='none';win();}
+        else{misses++;shake(inp);fb.className='fb no';fb.innerHTML='';
+          fb.appendChild(h('strong',{text:'Not quite.'}));
+          fb.appendChild(document.createTextNode((v<c.min?'Try a higher number. ':'Try a lower number. ')+(c.hint||'')));}
+      }}},[h('label',{'for':'answer-'+st.i,text:c.label}),inp,check]);
+    }
+
+    show([
+      head('Step '+(c.s+1)+' of '+STAGES.length+' \u00b7 '+STAGES[c.s].name+' \u00b7 '+STAGES[c.s].where,c.q,c.art),
+      body,fb
+    ]);
+    var first=card.querySelector('input,button');if(first&&st.i>0)first.focus();
+  }
+
+  /* ---------- results ---------- */
+  function end(){
+    var tier=st.score>=MAX-1?0:(st.score>=MAX*0.65?1:2),rank=CFG.ranks[tier];
+    card.style.setProperty('--medal',['var(--atp)','var(--gas)','var(--food)'][tier]);
+    var guessed=st.guess===0;
+    var saved=saveBest(st.score);
+    var savedMsg=!saved?'Your points could not be saved in this browser window.'
+      :(st.score>startBest?'New best score. '+st.score+' '+UNIT+' now count toward your total on the home page.'
+      :'Your best score on this page is still '+readBest()+'. Beat it to raise your total.');
+    show([
+      head('Mission complete',CFG.endHeading,'medal'),
+      h('p',{'class':'big',text:st.score+' / '+MAX+' '+UNIT}),
+      h('p',{text:'Rank: '+rank+'.'}),
+      h('p',{text:savedMsg}),
+      h('div',{'class':'fb '+(guessed?'ok':'')},[
+        h('strong',{text:guessed?'Your prediction was right.':'Your prediction was not right this time.'}),
+        document.createTextNode(CFG.predict.why)
+      ]),
+      h('p',{text:CFG.summary}),
+      h('button',{'class':'go',type:'button',text:'Play again',on:{click:restart}})
+    ]);
+  }
+
+  /* the first option in every list is the correct one; lists are shuffled when shown */
+  document.getElementById('restart').addEventListener('click',restart);
+  var saved=loadProgress();
+  if(saved){
+    st.i=saved.i;st.score=saved.score;st.guess=saved.guess;startBest=saved.startBest||0;
+    st.i<Q.length?play():end();
+  }else intro();
+})();
+</script>
+</body>
+</html>
