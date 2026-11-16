@@ -353,6 +353,7 @@ input{font:500 18px var(--body);color:var(--ink);background:var(--bg);border:1.5
   var STAGES=CFG.stages,Q=CFG.questions,MAX=Q.length,PAGE_ID=CFG.pageId; /* one question, one point */
   var card=document.getElementById('card'),route=document.getElementById('route');
   var st={i:-1,score:0,guess:null,got:[]}; /* got[k] is 1 once question k has earned its point */
+  var viewing=null; /* the question on screen, which can be an earlier one after Back */
   var UNIT=CFG.unit||'points',UNIT1=CFG.unitOne||'point';
   /* Illustrations: small drawings shown beside each question. */
   var ART={"alveoli": "<path d=\"M30,96 C60,128 100,128 100,112\" fill=\"none\" stroke=\"var(--poor)\" stroke-width=\"11\" stroke-linecap=\"round\"/><path d=\"M100,112 C100,128 150,126 174,92\" fill=\"none\" stroke=\"var(--rich)\" stroke-width=\"11\" stroke-linecap=\"round\"/><circle cx=\"74\" cy=\"44\" r=\"24\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"3\"/><circle cx=\"120\" cy=\"40\" r=\"24\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"3\"/><circle cx=\"98\" cy=\"76\" r=\"24\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"3\"/><circle cx=\"140\" cy=\"76\" r=\"19\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"3\"/><circle cx=\"56\" cy=\"78\" r=\"17\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"3\"/><circle cx=\"92\" cy=\"70\" r=\"4.5\" fill=\"var(--o2)\"/><circle cx=\"106\" cy=\"84\" r=\"4.5\" fill=\"var(--o2)\"/><circle cx=\"124\" cy=\"44\" r=\"4.5\" fill=\"var(--co2)\"/><circle cx=\"72\" cy=\"40\" r=\"4.5\" fill=\"var(--co2)\"/>", "blood": "<rect x=\"4\" y=\"28\" width=\"192\" height=\"74\" rx=\"37\" fill=\"var(--blood)\"/><g transform=\"rotate(-20 40 58)\"><ellipse cx=\"40\" cy=\"58\" rx=\"13\" ry=\"9\" fill=\"var(--rich)\"/><ellipse cx=\"40\" cy=\"58\" rx=\"6\" ry=\"3.5\" fill=\"#000\" opacity=\".16\"/></g><g transform=\"rotate(15 78 80)\"><ellipse cx=\"78\" cy=\"80\" rx=\"13\" ry=\"9\" fill=\"var(--rich)\"/><ellipse cx=\"78\" cy=\"80\" rx=\"6\" ry=\"3.5\" fill=\"#000\" opacity=\".16\"/></g><g transform=\"rotate(10 112 50)\"><ellipse cx=\"112\" cy=\"50\" rx=\"13\" ry=\"9\" fill=\"var(--rich)\"/><ellipse cx=\"112\" cy=\"50\" rx=\"6\" ry=\"3.5\" fill=\"#000\" opacity=\".16\"/></g><g transform=\"rotate(-25 160 66)\"><ellipse cx=\"160\" cy=\"66\" rx=\"13\" ry=\"9\" fill=\"var(--rich)\"/><ellipse cx=\"160\" cy=\"66\" rx=\"6\" ry=\"3.5\" fill=\"#000\" opacity=\".16\"/></g><g transform=\"rotate(30 70 46)\"><ellipse cx=\"70\" cy=\"46\" rx=\"13\" ry=\"9\" fill=\"var(--rich)\"/><ellipse cx=\"70\" cy=\"46\" rx=\"6\" ry=\"3.5\" fill=\"#000\" opacity=\".16\"/></g><circle cx=\"134\" cy=\"80\" r=\"11\" fill=\"var(--egg)\" stroke=\"var(--line)\" stroke-width=\"2\"/><circle cx=\"104\" cy=\"76\" r=\"3\" fill=\"var(--atp)\"/><circle cx=\"48\" cy=\"82\" r=\"3\" fill=\"var(--atp)\"/><circle cx=\"150\" cy=\"44\" r=\"3\" fill=\"var(--atp)\"/>", "heart": "<rect x=\"76\" y=\"6\" width=\"14\" height=\"30\" rx=\"5\" fill=\"var(--poor)\"/><rect x=\"110\" y=\"6\" width=\"14\" height=\"30\" rx=\"5\" fill=\"var(--rich)\"/><path d=\"M100,118 C36,78 26,44 48,26 C68,11 90,22 100,42 C110,22 132,11 152,26 C174,44 164,78 100,118 Z\" fill=\"var(--rich)\"/><path d=\"M100,42 L100,116 M52,66 L148,66\" stroke=\"#000\" stroke-opacity=\".22\" stroke-width=\"3\" stroke-dasharray=\"6 5\"/>", "loop": "<path d=\"M100,66 C56,66 52,14 100,14\" fill=\"none\" stroke=\"var(--poor)\" stroke-width=\"8\"/><path d=\"M100,14 C148,14 144,66 100,66\" fill=\"none\" stroke=\"var(--rich)\" stroke-width=\"8\"/><path d=\"M100,66 C150,66 152,120 100,120\" fill=\"none\" stroke=\"var(--rich)\" stroke-width=\"8\"/><path d=\"M100,120 C48,120 50,66 100,66\" fill=\"none\" stroke=\"var(--poor)\" stroke-width=\"8\"/><rect x=\"78\" y=\"4\" width=\"44\" height=\"20\" rx=\"10\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"2.5\"/><rect x=\"74\" y=\"110\" width=\"52\" height=\"18\" rx=\"9\" fill=\"var(--cell)\" stroke=\"var(--cell-edge)\" stroke-width=\"2.5\"/><g transform=\"translate(74 46) scale(.26)\"><path d=\"M100,118 C36,78 26,44 48,26 C68,11 90,22 100,42 C110,22 132,11 152,26 C174,44 164,78 100,118 Z\" fill=\"var(--rich)\"/></g>", "lungs": "<rect x=\"93\" y=\"4\" width=\"14\" height=\"44\" rx=\"6\" fill=\"var(--panel)\" stroke=\"var(--mito-ink)\" stroke-width=\"2.5\"/><path class=\"organ\" d=\"M92,32 C68,30 40,62 38,100 C38,116 62,118 92,104 Z\"/><path class=\"organ\" d=\"M108,32 C132,30 160,62 162,100 C162,116 138,118 108,104 Z\"/><path d=\"M92,50 L72,72 M72,72 L60,92 M72,72 L80,94 M108,50 L128,72 M128,72 L140,92 M128,72 L120,94\" stroke=\"var(--mito-ink)\" stroke-width=\"3\" stroke-linecap=\"round\" fill=\"none\"/><path d=\"M22,123 Q100,100 178,123\" stroke=\"var(--mito-ink)\" stroke-width=\"5\" stroke-linecap=\"round\" fill=\"none\"/>", "medal": "<path d=\"M70,4 L92,58 L108,58 L130,4 L112,4 L100,34 L88,4 Z\" fill=\"var(--rich)\"/><circle cx=\"100\" cy=\"84\" r=\"38\" fill=\"var(--medal)\" stroke=\"var(--ink)\" stroke-width=\"3\"/><circle cx=\"100\" cy=\"84\" r=\"28\" fill=\"none\" stroke=\"#000\" stroke-opacity=\".2\" stroke-width=\"2\"/><polygon points=\"100.0,66.0 104.7,77.5 117.1,78.4 107.6,86.5 110.6,98.6 100.0,92.0 89.4,98.6 92.4,86.5 82.9,78.4 95.3,77.5\" fill=\"var(--panel)\" opacity=\".9\"/>", "pulse": "<path d=\"M6,72 L52,72 L64,52 L78,98 L94,18 L110,108 L122,72 L134,72\" fill=\"none\" stroke=\"var(--rich)\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><g transform=\"translate(126 26) scale(.44)\"><path d=\"M100,118 C36,78 26,44 48,26 C68,11 90,22 100,42 C110,22 132,11 152,26 C174,44 164,78 100,118 Z\" fill=\"var(--rich)\"/></g>", "vessels": "<path d=\"M6,26 L194,26\" stroke=\"var(--rich)\" stroke-width=\"18\" stroke-linecap=\"round\"/><path d=\"M6,106 L194,106\" stroke=\"var(--poor)\" stroke-width=\"18\" stroke-linecap=\"round\"/><path d=\"M60,34 C60,66 86,66 86,98 M100,34 L100,98 M140,34 C140,66 114,66 114,98 M60,56 C80,70 120,70 140,56\" fill=\"none\" stroke=\"var(--proton)\" stroke-width=\"3.5\" stroke-linecap=\"round\"/><path d=\"M20.0,26.0 L39.7,26.0\" stroke=\"var(--panel)\" stroke-width=\"2.5\" stroke-linecap=\"round\" fill=\"none\"/><polygon points=\"46.0,26.0 38.1,30.3 38.1,21.7\" fill=\"var(--panel)\"/><path d=\"M180.0,106.0 L160.3,106.0\" stroke=\"var(--panel)\" stroke-width=\"2.5\" stroke-linecap=\"round\" fill=\"none\"/><polygon points=\"154.0,106.0 161.9,101.7 161.9,110.3\" fill=\"var(--panel)\"/>"};
@@ -423,7 +424,7 @@ input{font:500 18px var(--body);color:var(--ink);background:var(--bg);border:1.5
 
   STAGES.forEach(function(s,i){route.appendChild(h('li',{text:(i+1)+'. '+s.name}));});
   function status(){
-    var cur=st.i<0?-1:(st.i>=Q.length?STAGES.length:Q[st.i].s);
+    var cur=viewing!==null?Q[viewing].s:(st.i<0?-1:(st.i>=Q.length?STAGES.length:Q[st.i].s));
     [].forEach.call(route.children,function(li,i){li.className=i===cur?'now':(i<cur?'past':'');});
     document.getElementById('fill').style.width=(st.score/MAX*100)+'%';
     document.getElementById('score').textContent=st.score+' '+(st.score===1?UNIT1:UNIT);
@@ -433,7 +434,7 @@ input{font:500 18px var(--body);color:var(--ink);background:var(--bg);border:1.5
 
   /* ---------- intro: the learner makes a prediction ---------- */
   function intro(){
-    startBest=readBest()||0;
+    viewing=null;startBest=readBest()||0;
     var fb=h('div',{'class':'fb','aria-live':'polite'});
     var guessBtns=shuffle(CFG.predict.opts.map(function(t,i){return i;})).map(function(i){
       return h('button',{type:'button','aria-pressed':'false',text:CFG.predict.opts[i],on:{click:function(){
@@ -443,7 +444,7 @@ input{font:500 18px var(--body);color:var(--ink);background:var(--bg);border:1.5
     });
     show([
       head('Your mission',CFG.intro.heading,CFG.intro.art),
-      h('p',{text:CFG.intro.text+' Each question is worth 1 '+UNIT1+'. You earn it by getting the answer right on your first try. If you miss one, you can retake it.'}),
+      h('p',{text:CFG.intro.text+' Each question is worth 1 '+UNIT1+'. You earn it by getting the answer right on your first try. If you miss one, you can retake it, and you can go back to earlier questions.'}),
       h('p',{text:'Before you start, make a prediction. '+CFG.predict.q}),
       h('div',{'class':'opts'},guessBtns),
       fb,
@@ -460,21 +461,36 @@ input{font:500 18px var(--body);color:var(--ink);background:var(--bg);border:1.5
   function play(idx,onDone,retake){
     if(idx===undefined)idx=st.i;
     var c=Q[idx],misses=0,fb=h('div',{'class':'fb','aria-live':'polite'}),body;
+    var passed=!onDone&&idx<st.i; /* an earlier question, reached with Back */
+    viewing=idx;
+    var navBox=h('div',{'class':'btns'});
+    function forward(){
+      if(onDone){onDone();return;}
+      if(idx+1>st.i)st.i=idx+1;
+      idx+1<Q.length?play(idx+1):end();
+    }
+    /* Back, Retake and Next. Next shows once the question is answered, or if it was passed before. */
+    function nav(answered,pts){
+      var bs=[],last=idx===Q.length-1;
+      if(!onDone&&idx>0)bs.push(h('button',{'class':'go alt',type:'button',text:'Back',on:{click:function(){play(idx-1);}}}));
+      if(answered&&!pts&&!st.got[idx])bs.push(h('button',{'class':'go',type:'button',text:'Retake this question',on:{click:function(){play(idx,onDone,true);}}}));
+      if(answered||passed)bs.push(h('button',{'class':'go'+(answered&&(pts||st.got[idx])?'':' alt'),type:'button',text:onDone?'Continue':(last?'See your results':'Next'),on:{click:forward}}));
+      navBox.innerHTML='';bs.forEach(function(x){navBox.appendChild(x);});
+      var main=navBox.querySelector('button.go:not(.alt)');
+      if(answered&&(main||bs.length))(main||bs[bs.length-1]).focus();
+    }
+    nav(false);
+    if(passed&&!retake){fb.className='fb';fb.textContent=st.got[idx]?'You already earned this '+UNIT1+'. You can answer again for practice.':'You missed this one earlier. Get it right on the first try to earn the '+UNIT1+'.';}
     function miss(el){misses++;if(el)shake(el);fb.className='fb no';fb.innerHTML='';fb.appendChild(h('strong',{text:'Not quite.'}));fb.appendChild(document.createTextNode(c.hint||''));}
     function win(){
-      var pts=misses?0:1;
-      if(pts&&!st.got[idx]){st.got[idx]=1;st.score++;}
-      saveBest(st.score);saveProgress(onDone?st.i:idx+1);
+      var pts=misses?0:1,had=!!st.got[idx];
       fb.className='fb ok';fb.innerHTML='';
-      fb.appendChild(h('strong',{},[stars(pts),document.createTextNode(pts?'Correct. +1 '+UNIT1+(retake?' earned on the retake.':''):'Got it. No '+UNIT1+' yet, because it took more than one try. Retake the question to earn it.')]));
+      fb.appendChild(h('strong',{},[stars(pts||had?1:0),document.createTextNode((pts?(had?'Correct. You already had this '+UNIT1+'.':'Correct. +1 '+UNIT1+(retake||passed?' earned this time.':'')):(had?'Got it. It took more than one try, but you keep the '+UNIT1+' you earned before.':'Got it. No '+UNIT1+' yet, because it took more than one try. Retake the question to earn it.')))]));
       fb.appendChild(document.createTextNode(c.why));
-      var last=idx===Q.length-1,btns=[];
-      if(!pts)btns.push(h('button',{'class':'go',type:'button',text:'Retake this question',on:{click:function(){play(idx,onDone,true);}}}));
-      btns.push(h('button',{'class':'go'+(pts?'':' alt'),type:'button',text:onDone?'Continue':(last?'See your results':'Next'),on:{click:function(){
-        if(onDone){onDone();return;}
-        st.i=idx+1;st.i<Q.length?play():end();
-      }}}));
-      card.appendChild(h('div',{'class':'btns'},btns));status();btns[0].focus();
+      if(pts&&!had){st.got[idx]=1;st.score++;}
+      if(!onDone&&idx+1>st.i)st.i=idx+1; /* this question is now behind her, so Back and Next treat it as passed */
+      saveBest(st.score);saveProgress(onDone?st.i:Math.max(st.i,idx+1));
+      status();nav(true,pts);
     }
 
     if(c.type==='choice'){
@@ -558,13 +574,14 @@ input{font:500 18px var(--body);color:var(--ink);background:var(--bg);border:1.5
 
     show([
       head((retake?'Retake \u00b7 ':'')+'Step '+(c.s+1)+' of '+STAGES.length+' \u00b7 '+STAGES[c.s].name+' \u00b7 '+STAGES[c.s].where,c.q,c.art),
-      body,fb
+      body,fb,navBox
     ]);
     var first=card.querySelector('input,button');if(first&&(idx>0||retake))first.focus();
   }
 
   /* ---------- results ---------- */
   function end(){
+    viewing=null;
     var tier=st.score>=MAX-1?0:(st.score>=MAX*0.65?1:2),rank=CFG.ranks[tier];
     card.style.setProperty('--medal',['var(--atp)','var(--gas)','var(--food)'][tier]);
     var guessed=st.guess===0,missed=[];
@@ -585,8 +602,10 @@ input{font:500 18px var(--body);color:var(--ink);background:var(--bg);border:1.5
       h('p',{text:CFG.summary}),
       h('div',{'class':'btns'},missed.length?[
         h('button',{'class':'go',type:'button',text:'Retake the '+(missed.length===1?'question':missed.length+' questions')+' you missed',on:{click:function(){review(missed,0);}}}),
+        h('button',{'class':'go alt',type:'button',text:'Back',on:{click:function(){play(Q.length-1);}}}),
         h('button',{'class':'go alt',type:'button',text:'Start again from 0',on:{click:restart}})
-      ]:[h('button',{'class':'go',type:'button',text:'Play again',on:{click:restart}})])
+      ]:[h('button',{'class':'go',type:'button',text:'Play again',on:{click:restart}}),
+         h('button',{'class':'go alt',type:'button',text:'Back',on:{click:function(){play(Q.length-1);}}})])
     ]);
   }
   /* retake the missed questions one after another, then come back to the results */
